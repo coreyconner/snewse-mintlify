@@ -1,0 +1,34 @@
+---
+title: "Configure origins and authentication"
+description: "Apply the currently supported SNEWSE origin settings without assuming an unsettled production topology."
+---
+
+Local browser apps send relative `/api/*` and `/media/*` requests through their Vite development proxies. That arrangement supports local development; it does not settle whether a production deployment uses same-origin proxying or direct browser traffic to a separate API origin.
+
+## Current local configuration
+
+`SEMANTIC_NEWS_CORE_HTTP_URL` selects the Core target for Account, Devour, and Studio development proxies. It defaults to `http://127.0.0.1:5174`.
+
+`SEMANTIC_NEWS_ACCOUNT_URL` selects a fixed Account URL for identity handoffs. Without it, browser apps derive Account from the current host and local Account port. The Clipper stores explicit Account and API base URLs in extension-local settings.
+
+For session auth from another permitted origin, configure Core's trusted-origin settings through `SEMANTIC_NEWS_FRONTEND_URL` or `SEMANTIC_NEWS_TRUSTED_ORIGINS`. Local development already recognizes the supported Vite port range. Verify a deployment by reading the session through the application origin and completing sign-in and sign-out with a safe return path.
+
+## Separate-origin deployment gate
+
+Direct credentialed calls from browser apps to a separate API origin require one approved design covering all of these together:
+
+- exact application and API origins;
+- credentialed CORS allowlisting;
+- cookie domain, `SameSite`, and secure transport behavior;
+- CSRF and origin validation;
+- Better Auth trusted origins and callback URLs;
+- safe Account and extension return URLs;
+- `/media/*` delivery and proxy ownership.
+
+<Warning>
+  Better Auth trusted origins do not configure CORS or replace CSRF protection. Do not enable wildcard credentialed CORS to bypass the unresolved topology decision.
+</Warning>
+
+Object-storage credentials remain server-side. Browsers receive Media only through Core's authorized delivery behavior; see [Media](/developer/core/media).
+
+This is a bounded origin and authentication guide, not a complete production deployment manual. The repository does not currently define a production load balancer, TLS terminator, process supervisor, DNS layout, or final proxy topology. The [Devour Vite configuration](https://github.com/coreyconner/snewse/blob/master/apps/devour/vite.config.ts) is current evidence for local proxying only.

@@ -1,0 +1,72 @@
+---
+title: "Set up a local workspace"
+description: "Install the SNEWSE workspace prerequisites and start its ordinary local application stack."
+---
+
+Use this guide from the SNEWSE repository root. The ordinary development stack starts Core, Account, Devour, and Studio. It does not start a manifest worker.
+
+## Prerequisites
+
+- Node.js 26 or newer.
+- pnpm installed directly, at the version declared by the root `packageManager` field.
+- Gitleaks available on your path for the repository's Git hooks.
+- PostgreSQL and any object storage required by your chosen Core configuration.
+- Environment values described by the root `.env.example`.
+
+Verify the toolchain from the repository root:
+
+```powershell
+node --version
+pnpm --version
+gitleaks version
+```
+
+Node should report 26 or newer, and pnpm should select the workspace version.
+Gitleaks should report its installed version. The root
+[package manifest](https://github.com/coreyconner/snewse/blob/master/package.json)
+owns the Node and pnpm requirements; installation uses pnpm directly rather than Corepack.
+
+## Install and start
+
+<Steps>
+  <Step title="Install dependencies">
+
+  From the repository root:
+
+  ```powershell
+  pnpm install
+  ```
+
+  The command should complete without an unresolved workspace dependency.
+  </Step>
+  <Step title="Provide local configuration">
+
+  Use the root `.env.example` as the variable inventory. From the repository root, Core loads `.env`, `.env.local`, `.env.development`, and `.env.development.local` first from the repository root and then from `apps/core`; process environment values take final precedence. Put shared local values in a root env file and Core-only overrides in the matching file below `apps/core`. At minimum, Core needs a valid `DATABASE_URL` for product routes that use persistence.
+
+  Devour's Vite configuration reads the same four development filenames from the repository root and `apps/devour`, in that order, and process values take precedence in the settings it resolves.
+  </Step>
+  <Step title="Start the application stack">
+
+  From the repository root:
+
+  ```powershell
+  pnpm dev
+  ```
+
+  The supervisor should report the application processes as started. Core defaults to `http://127.0.0.1:5174`, Devour to `http://127.0.0.1:5173`, Studio to `http://127.0.0.1:5175`, and Account to `http://127.0.0.1:5176`.
+  </Step>
+  <Step title="Check the API process">
+
+  Open `http://127.0.0.1:5174/api/healthz`. A successful response confirms process liveness. Use [Core API operations](/operate/core/api) for readiness and API-reference checks.
+  </Step>
+</Steps>
+
+<Warning>
+  `pnpm dev:manifest-worker` consumes eligible work from the configured queue and can perform stale-run recovery. Start it only with an authorized database and queue scope; see [run the manifest worker](/operate/core/worker).
+</Warning>
+
+The Account and Studio apps are dependencies of particular local flows: Account supplies identity lifecycle pages, and Studio supplies authored Manifest uploads. They do not require separate setup when `pnpm dev` already starts the full application stack.
+
+`pnpm dev:apps` starts the same ordinary stack. Contributor hook and lint commands
+remain in the [root scripts](https://github.com/coreyconner/snewse/blob/master/package.json)
+and [hook configuration](https://github.com/coreyconner/snewse/blob/master/lefthook.yml).

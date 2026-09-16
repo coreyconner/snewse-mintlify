@@ -1,0 +1,51 @@
+---
+title: "Standards exceptions"
+description: "How an exception is justified, approved, scoped, recorded, and removed."
+---
+
+Only an explicit decision from an authorized human maintainer approves a
+recorded exception. A general implementation request, existing pattern,
+allowlist, baseline entry, passing test, or agent conclusion is not approval.
+Implementing agents may propose exceptions; they cannot approve or broaden them.
+
+The [exception records](/standards/exception-records) hold current and historical
+decisions. Their presence in documentation does not make a change to the text
+an approval. Each active record must identify its actual approving decision.
+
+## Grounds for an exception
+
+An exception requires evidence that the required outcome cannot be achieved
+while following the standard. That evidence covers the repository's pinned
+stack and compliant alternatives in the surrounding design, beyond a direct
+replacement for the exceptional code.
+Implementation does not continue past a known standards conflict without an
+approved recorded exception.
+
+## Required request record
+
+Each request contains the following information for maintainer review:
+
+| Field | Required information |
+| --- | --- |
+| Status | Requested; implementation blocked at the conflict |
+| Standard | The exact requirement and its authoritative page |
+| Owner and operation | The named owner and operation requiring a deviation |
+| Proposed location | The exact file and smallest exceptional fragment |
+| Required capability | The outcome that cannot otherwise be achieved |
+| Pinned stack | Relevant versions and APIs checked |
+| Evidence | Reproduction or authoritative API evidence |
+| Alternatives | Each compliant alternative and why it fails |
+| Design alternative | Why changing the surrounding design does not remove the need |
+| Verification | The focused check that covers the deviation |
+| Scope boundary | What the request does not authorize |
+| Removal condition | The specific condition that ends the exception |
+| Approver and date | Not approved until the maintainer explicitly decides |
+
+## Decision and lifecycle
+
+An approved record retains the request evidence, exact scope, approved status,
+approver, and date. Broadening an exception requires a new request.
+
+Implementation changes require reassessment of the exceptional fragment and
+its removal condition. Records distinguish historical approval from current
+applicability; a deleted filename alone does not prove every obligation was removed.

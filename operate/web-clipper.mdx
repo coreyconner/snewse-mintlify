@@ -1,0 +1,46 @@
+---
+title: "Set up and verify the Web Clipper"
+description: "Build, load, configure, capture, submit, and troubleshoot the Chrome extension locally."
+---
+
+Use Chrome and a local SNEWSE stack. The Clipper defaults to Core at `http://127.0.0.1:5174` and Account at `http://127.0.0.1:5176`.
+
+<Steps>
+  <Step title="Build the extension">
+
+  From the SNEWSE repository root:
+
+  ```powershell
+  pnpm --filter @snewse/web-clipper build
+  ```
+
+  The command should create `apps/web-clipper/dist` with `manifest.json`, popup assets, `background.js`, and `content.js`.
+  </Step>
+  <Step title="Load the unpacked build">
+
+  Open Chrome's extension management page, enable **Developer mode**, choose **Load unpacked**, and select `apps/web-clipper/dist`. Reload the extension after every rebuild so Chrome activates the current scripts and permissions.
+  </Step>
+  <Step title="Start identity and API dependencies">
+
+  From the repository root, run `pnpm dev:core` and `pnpm dev:account` in separate terminals, or use `pnpm dev` for the ordinary application stack. Confirm Core's `/api/healthz` responds before opening the popup.
+  </Step>
+  <Step title="Sign in and capture">
+
+  Open the popup, confirm the API and Account base URLs, and use the Account handoff to sign in. Open an article page, capture the active tab, and review title, authors, dates, publication, slug, body, warnings, and Collection selection.
+  </Step>
+  <Step title="Inspect or submit">
+
+  **Download ZIP** should create an archive containing `manifest.json`, `article.xml`, and any fetched Media files. **Submit** should return a saved, unchanged, or queued outcome with a request identifier.
+  </Step>
+</Steps>
+
+## Troubleshoot the smoke flow
+
+- If capture cannot access the page, confirm the loaded extension has `activeTab` and `scripting` permissions and try a normal HTTP page rather than a browser-internal page.
+- If sign-in cannot return, confirm Chrome's identity API is available and both configured base URLs are valid HTTP URLs.
+- If local API requests fail, inspect the active `dist/manifest.json`. The checked-in manifest grants local host access only for `127.0.0.1:5174` and `localhost:5174`.
+- If settings or permissions look stale, rebuild and reload or remove and re-add the unpacked extension.
+- If an image remains external, inspect the warning. Browser fetch restrictions intentionally preserve its URL instead of failing the capture.
+- If submission succeeds but the Article is queued, start an authorized worker separately; the ordinary app stack excludes workers.
+
+API and Account URLs are stored in extension-local storage. Credentials and API keys are not persisted by the current settings store. See [capture and review](/developer/web-clipper/capture), [bundle construction](/developer/web-clipper/bundles), and [sessions and submission](/developer/web-clipper/submission) for the implementation boundaries.

@@ -1,0 +1,81 @@
+---
+title: "Annotations and Tags"
+description: "Understand Core's private annotation aggregate, versioned mutations, Tag vocabulary, and two distinct kinds of Tag assignment."
+---
+
+Annotations are private, user-owned overlays on canonical Article content. They can combine a note, a highlight, and Tags without changing the shared Article, Unit, or Graf records. Core returns them through an authenticated, private API rather than adding them to the public Article aggregate.
+
+An annotation always belongs to one Article and one user. Access to that Article remains a separate [User Access](/developer/core/user-access) fact: listing or changing annotations requires the user's direct Article grant, and creating an annotation never creates that grant.
+
+<Info>
+  The annotation aggregate stores anchor evidence when the annotation refers to selected text. [Annotation anchors](/developer/core/annotation-anchors) explains how Core validates that evidence and resolves it against the current Article projection.
+</Info>
+
+## One aggregate, several components
+
+An annotation may carry any meaningful combination of these components:
+
+| Component | Purpose | Constraint |
+| --- | --- | --- |
+| Note | Preserves the user's entered plain-text body | The body must contain a non-whitespace character. Only an unanchored Article note may have a title. |
+| Highlight | Assigns a supported highlight color | Requires at least one anchor range. |
+| Annotation Tags | Classifies this annotation with Tags owned by the same user | A Tag-only annotation still needs an anchor; unanchored classification belongs to direct Article Tags. |
+
+Ranges are immutable after creation. A patch can replace the note, highlight color, or complete Annotation Tag set, but it cannot move the aggregate to another Article or replace its captured ranges. The exact request and response shapes remain in the [`annotations` contract](https://github.com/coreyconner/snewse/blob/master/packages/contracts/src/annotations.ts).
+
+This model distinguishes an unanchored Article note from an anchored note. An unanchored note applies to the Article as a whole and may have a title. An anchored note applies to selected canonical text and cannot have a title.
+
+## Creation and private reads
+
+Clients choose the annotation ID. Creation is idempotent around that ID: the first successful request creates the aggregate, while an exact replay returns the existing aggregate. Reusing the ID for different content, a different Article, or different anchor evidence is a conflict.
+
+When ranges are present, Core first loads the Article's canonical anchor projection and validates the submitted evidence. Source evidence that changed between selection and creation is reported as a conflict rather than saved against different text. Other invalid anchor structures are validation failures. See [Annotation anchors](/developer/core/annotation-anchors) for the distinction.
+
+An Article-scoped read returns three related results in one private response:
+
+- the user's annotations for that Article;
+- the current resolution of every stored anchor; and
+- the user's direct Tags on the Article.
+
+Core checks Article access before the read and again after loading annotation state and any anchor projection. This prevents a completed access revocation from returning stale private markup. The implementation is in [`list-article-annotations.ts`](https://github.com/coreyconner/snewse/blob/master/apps/core/src/annotations/operations/list-article-annotations.ts).
+
+## Versions and deletion
+
+Every annotation starts with a positive version. Patch and delete requests must name the version they observed. A stale version conflicts, which lets a client preserve local work and reload before deciding how to reconcile it.
+
+A meaningful patch increments the version once and updates the timestamp. A request whose resulting note, highlight, and Tag set already match the stored aggregate is a no-op: it returns the same version and timestamp. Removing the last remaining component deletes the aggregate and returns a deletion result.
+
+Explicit deletion also requires the observed version. Missing annotations, annotations owned by another user, and annotations whose Article the user cannot access share the same private not-found boundary. [`patch-annotation.ts`](https://github.com/coreyconner/snewse/blob/master/apps/core/src/annotations/operations/patch-annotation.ts) and [`delete-annotation.ts`](https://github.com/coreyconner/snewse/blob/master/apps/core/src/annotations/operations/delete-annotation.ts) define these mutation semantics.
+
+## The private Tag vocabulary
+
+A Tag belongs to one authenticated user. Its public value contains an ID, display name, and creation and update timestamps. Core trims the display name and derives a private normalized identity for uniqueness and ordering; clients supply the display name rather than that derived identity.
+
+Tag creation uses a client-selected ID and supports exact replay. Reusing an ID for another Tag or creating a name that normalizes to an existing owned name conflicts. Renaming uses last-write-wins behavior because Tags do not have mutation versions. Listing uses an opaque cursor over Core's stable normalized-name order.
+
+Deleting a Tag is idempotent. In one transaction, Core removes both kinds of assignment owned by the user. Each affected annotation is then either deleted because it has no note, highlight, or other Tag, or retained with its version advanced once. The exact normalization and cleanup logic live in [`tag-name.ts`](https://github.com/coreyconner/snewse/blob/master/apps/core/src/annotations/internal/tag-name.ts) and [`delete-tag.ts`](https://github.com/coreyconner/snewse/blob/master/apps/core/src/annotations/operations/delete-tag.ts).
+
+## Article Tags and Annotation Tags are different assignments
+
+The same private Tag vocabulary supports two independent relationships.
+
+| Assignment | Attaches to | Mutation model | Used for |
+| --- | --- | --- | --- |
+| Annotation Tag | One annotation aggregate | Replaced with the annotation's versioned patch | Classifying a specific note or highlight |
+| Direct Article Tag | One accessible Article | Idempotent additions and removals, without an annotation version | Classifying the Article itself and Article-query Tag filtering |
+
+Direct Article Tags are also independent of Collection membership. They do not grant Article access, and Collection placement does not create or remove them. See [Collections](/developer/core/collections) for organizational membership.
+
+Changing direct Article Tags preserves unrelated concurrent intent: requested removals discard matching owned assignments when present, requested additions insert missing owned assignments, and the response contains the complete resulting direct Tag set. [`change-article-tags.ts`](https://github.com/coreyconner/snewse/blob/master/apps/core/src/annotations/operations/change-article-tags.ts) is the implementation authority.
+
+<Columns cols={3}>
+  <Card title="Annotation anchors" icon="text-select" href="/developer/core/annotation-anchors">
+    Follow validation, exact recovery, and partial resolution.
+  </Card>
+  <Card title="User Access" icon="key-round" href="/developer/core/user-access">
+    See why annotation ownership does not replace an Article grant.
+  </Card>
+  <Card title="Units and Grafs" icon="blocks" href="/developer/core/units">
+    Understand the canonical text that anchors address.
+  </Card>
+</Columns>

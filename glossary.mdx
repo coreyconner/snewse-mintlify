@@ -1,0 +1,61 @@
+---
+title: "Glossary"
+description: "The product and application terms used across SNEWSE, with links to their detailed explanations."
+---
+
+Use these terms to identify the concept you need. Each linked guide owns the
+behavior, constraints, and implementation references for that concept.
+
+## Canonical content
+
+| Term | Meaning | Detailed guide |
+| --- | --- | --- |
+| Article | One captured editorial item, identified by an exact Article ID. | [Articles](/developer/core/articles) |
+| Unit | A semantic content resource derived from an Article and composed from ordered Grafs. | [Units and Grafs](/developer/core/units) |
+| Graf | An addressable text element used to compose a Unit. Use Graf when referring to the SNEWSE record. | [Canonical Graf text](/developer/core/units#canonical-graf-text) |
+| Topic | A shared semantic identity for a person, institution, or place. | [Topics](/developer/core/topics) |
+| Media | A canonical resource representing content such as an image, audio, or video. | [Media](/developer/core/media) |
+| Composition | Core's assembly of canonical resources into an Article or Unit response. | [Articles](/developer/core/articles) and [Units and Grafs](/developer/core/units) |
+
+## User-owned state
+
+| Term | Meaning | Detailed guide |
+| --- | --- | --- |
+| User Access | The materialized grants connecting a user to canonical content. | [User Access](/developer/core/user-access) |
+| User Library | The user's view of accessible Articles. | [User Access](/developer/core/user-access) and [User Library and Collections](/developer/devour/library) |
+| Collection | A named, user-owned organization of Articles. | [Collections](/developer/core/collections) |
+| Annotation | A user's private note, highlight, or tagged selection on one Article. | [Annotations and Tags](/developer/core/annotations) |
+| Anchor | Captured evidence locating an annotation's text selection in an Article. | [Annotation anchors](/developer/core/annotation-anchors) |
+| Tag | A private name assigned to an Annotation or directly to an Article. | [Tag vocabulary and assignments](/developer/core/annotations#the-private-tag-vocabulary) |
+| Artifact | A user-owned snapshot containing a title and an opaque JSON payload. | [Artifacts](/developer/core/artifacts) |
+
+<Note>
+  Topics and Tags name different concepts. Likewise, a Collection, an access
+  grant, and an Article association are different relationships. Follow their
+  owning guides when deciding which relationship a feature needs.
+</Note>
+
+## Capture and processing
+
+| Term | Meaning | Detailed guide |
+| --- | --- | --- |
+| Manifest | The shared description of captured metadata, source content, Media, and provenance. | [Manifest bundles](/developer/manifest/bundles) |
+| Manifest submission bundle | Manifest JSON, Article XML, and any declared Media bytes packaged for one captured Article. | [Bundle and submission containers](/developer/manifest/bundles#a-bundle-and-a-submission-are-different-containers) |
+| Article XML | The shared format for ordered source Grafs and Media references before they become Core content. | [Article XML](/developer/manifest/article-xml) |
+| Capture | The ingestion stage that preserves submitted content and creates or finds its canonical Article identity. | [Submission and capture](/developer/core/ingestion/capture) |
+| Manifest run | Tracked background processing for a capture. | [Worker execution and recovery](/developer/core/ingestion/worker) |
+| Semantic publication | The commit that makes prepared derived content available in Core. | [Semantic processing and publication](/developer/core/ingestion/semantics) |
+
+## Devour surfaces
+
+| Term | Meaning | Detailed guide |
+| --- | --- | --- |
+| Workspace | Devour's composition of navigable content panes. | [Workspace navigation](/developer/devour/workspace-navigation) |
+| Pane | An identified workspace instance hosting a content surface. | [Pane layout and interaction](/developer/devour/pane-layout) |
+| Article view | The Devour surface that presents an Article's composed content. | [Article view](/developer/devour/article-view) |
+| Command Palette | The application surface for selecting commands and supplying their context. | [Wayfinder and Command Palette](/developer/devour/wayfinder) |
+
+Wayfinder's command context, status controls, result panes, and Artifact blocks
+are explained together in [its guide](/developer/devour/wayfinder). Those UI
+terms do not establish the availability of an execution service or change the
+meaning of Core's opaque Artifact storage.

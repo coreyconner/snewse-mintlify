@@ -1,0 +1,70 @@
+---
+title: "Persistence"
+description: "Required Drizzle usage, query selection, database type ownership, and the limits on handwritten runtime SQL."
+---
+
+## Required tool and scope
+
+Core runtime PostgreSQL access uses **Drizzle ORM**. Its typed APIs cover reads,
+writes, joins, transactions, locks, aggregates, and projections.
+
+The [persistence guide](/developer/core/persistence) explains runtime construction
+and storage integration. This page owns the implementation requirements.
+
+## Query forms
+
+| Result needed | Required approach |
+| --- | --- |
+| A related object graph | Drizzle relational queries |
+| Filtering, ranking, aggregation, or a purpose-built projection | Drizzle's typed query builder |
+
+Drizzle relational queries are the required approach for related-object retrieval
+that the relations API can express, in preference to hand-assembled graphs.
+Each query is bounded to its named result. Generic query frameworks and database
+rows exposed as product contracts fall outside this boundary.
+
+## Implementation ownership
+
+A database-centered named read or command may be its own concrete Drizzle
+implementation. A separate persistence adapter is not required when the operation
+would only delegate, rename fields or outcomes, or convert row presence to a
+boolean. One implementation returns the final semantic result.
+
+Focused persistence supports operations with substantive independent policy,
+transformation, or coordination. Transaction callbacks and capability bags are
+not grounds for introducing an otherwise unnecessary separation.
+
+Composition supplies the process-scoped `getDb` to the implementation factory.
+Callers receive the named operation. Pools, databases, query builders, and
+transactions must not appear as operation inputs or results.
+
+Atomic database use cases and their transactions remain together. This does not
+authorize cross-owner writes beyond an explicitly approved workflow. Importing
+a module must not load environment variables, open a connection, or create a
+database singleton.
+
+## Database types
+
+The Drizzle table or typed query owns database field types:
+
+- Complete table rows use `$inferSelect` and `$inferInsert`.
+- Projections, joins, aggregates, and `returning` results use query inference.
+- Database types remain inferred through application flow; manually mirrored rows
+  and reconstruction through `Record<string, unknown>`, casts, or field parsers
+  are excluded.
+- Trusted typed Drizzle results retain their established types without runtime parsing.
+
+`drizzle-orm/zod` is reserved for untrusted runtime boundaries with genuinely
+database-shaped payloads. It does not make a database row the public API contract.
+[Runtime validation](/standards/runtime-validation) owns trust boundaries;
+[Public contracts](/standards/contracts) owns wire schemas.
+
+## Handwritten runtime SQL
+
+Handwritten SQL in a Core runtime query requires an explicitly approved exception. This includes raw driver calls, SQL strings, `sql`,
+`sql.raw`, and typed SQL fragments.
+
+If the required operation cannot be expressed through the pinned Drizzle stack,
+the [exception process](/standards/exceptions) governs any proposed deviation. The current
+[exception records](/standards/exception-records) define any permitted fragment;
+an existing cast or baseline entry does not authorize another one.

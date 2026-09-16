@@ -1,0 +1,109 @@
+---
+title: "Tools and their purpose"
+description: "Tools, their roles in SNEWSE, and the standards or implementation references that define their boundaries."
+---
+
+This index connects the tool stack to its purpose and owning reference.
+**Standard** links define agreed requirements. **Guide** and **Code** links
+describe current implementation; their presence here does not make a tool
+mandatory in every application.
+
+## Frontend application and state
+
+| Tool | Purpose and boundary | Reference |
+| --- | --- | --- |
+| React and React DOM | Devour component composition and browser rendering. The Clipper popup uses direct DOM code. | [Guide: Devour architecture](/developer/devour/overview) |
+| TanStack Start | Devour application runtime and Vite integration; its current root route disables SSR. | [Guide: Devour architecture](/developer/devour/overview) |
+| TanStack Router | Routes and durable URL-backed workspace composition. | [Guide: Workspace navigation](/developer/devour/workspace-navigation) |
+| TanStack Query | Server data, mutations, and cache lifetimes; shared defaults live in Browser client. Query Devtools is development-only. | [Guide: State ownership](/developer/devour/state) |
+| TanStack Form | Form values, validation metadata, and submission state through local adapters. | [Code: Form adapters](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/lib/forms.tsx) |
+| TanStack Store | Small in-memory presentation preferences, separate from URL and server state. | [Guide: State ownership](/developer/devour/state) |
+| TanStack React Hotkeys | Workspace and command-palette keyboard shortcuts. | [Guide: Workspace navigation](/developer/devour/workspace-navigation) |
+| Better Auth browser clients | Reactive Devour sessions and Clipper session checks; Core owns authentication. | [Guide: Session admission](/developer/devour/state#session-admission) |
+
+## Frontend presentation
+
+| Tool | Purpose and boundary | Reference |
+| --- | --- | --- |
+| Tailwind CSS | Owner-local utilities, semantic theme values, and the native-element baseline in Devour. | [Guide: Visual language and styling](/developer/devour/styling) |
+| Base UI | Headless interaction primitives behind Devour's local controls. | [Code: Local UI components](https://github.com/coreyconner/snewse/tree/master/apps/devour/src/components/ui) |
+| shadcn | Component-generation configuration and generated styling inputs for the local component layer. | [Code: Component configuration](https://github.com/coreyconner/snewse/blob/master/apps/devour/components.json) |
+| CVA | Finite variants for local components such as buttons. | [Code: Button variants](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/components/ui/button.tsx) |
+| clsx and tailwind-merge | Class composition and Tailwind utility-conflict resolution. | [Code: Class helpers](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/lib/utils.ts) |
+| Phosphor React | Product UI icons; custom SNEWSE marks and content graphics have separate SVG owners. | [Guide: Visual language and styling](/developer/devour/styling) |
+| cmdk | Command-menu primitive inside the command palette. | [Code: Command palette](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/command-palette/CommandPaletteDialog.tsx) |
+| Sonner | Global toaster and feature-level notifications. | [Code: Toaster](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/components/ui/sonner.tsx) |
+
+## API, validation, and persistence
+
+| Tool | Purpose and boundary | Reference |
+| --- | --- | --- |
+| Hono and its Node adapter | Core HTTP routing and serving. | [Guide: HTTP boundary](/developer/core/http) |
+| Zod | Complete schemas where untrusted input enters. | [Standard: Runtime validation](/standards/runtime-validation) |
+| `@hono/zod-openapi` | Route/schema integration for Core's generated OpenAPI document. | [Guide: Generated API reference](/developer/core/http#generated-api-reference) |
+| Scalar | Interactive reference UI for the generated API. | [Guide: Core API operations](/operate/core/api) |
+| `@snewse/contracts` | Shared public request and response contracts. | [Standard: Public contracts](/standards/contracts) |
+| Better Auth and its API-key plugin | Core authentication, sessions, and managed API credentials. | [Guide: Authentication](/developer/core/authentication) |
+| PostgreSQL and `pg` | Product database and connection-pool infrastructure beneath typed persistence. | [Guide: Persistence](/developer/core/persistence) |
+| Drizzle ORM | Typed Core runtime PostgreSQL access. | [Standard: Persistence](/standards/persistence) |
+| `drizzle-orm/zod` | Database-shaped input schemas at a genuine untrusted boundary. | [Standard: Database types](/standards/persistence#database-types) |
+| `pg_dump` | External database-backup utility invoked by Core's backup CLI. | [Guide: Database operations](/operate/core/database) |
+
+## Capture, ingestion, and storage
+
+| Tool or service | Purpose and boundary | Reference |
+| --- | --- | --- |
+| Defuddle | Article-content extraction from the active tab DOM before Clipper review. | [Guide: Capture and review](/developer/web-clipper/capture) |
+| fflate | Clipper review ZIP generation for Article XML and Manifest files. | [Guide: Clipper bundles](/developer/web-clipper/bundles) |
+| saxes | XML parsing inside the shared Article XML package. | [Guide: Article XML](/developer/manifest/article-xml) |
+| OpenAI Responses API | Structured semantic generation through Core's direct HTTP adapter. | [Guide: Semantic processing](/developer/core/ingestion/semantics) |
+| OpenAI Embeddings API | Vector generation through Core's direct HTTP adapter. | [Guide: Semantic processing](/developer/core/ingestion/semantics) |
+| S3-compatible object storage | Media storage through native HTTP requests and the shared Signature V4 implementation. | [Guide: Media](/developer/core/media) |
+| Browser extension storage APIs | Clipper endpoint settings through extension storage, with a local-storage fallback. | [Code: Clipper settings](https://github.com/coreyconner/snewse/blob/master/apps/web-clipper/src/lib/apiSettings.ts) |
+
+The OpenAI and object-storage integrations use direct HTTP adapters. Their
+implementation references identify the actual owners; they do not imply an SDK
+dependency. [Shared packages](/developer/packages) covers the internal workspace
+packages that support these capabilities.
+
+## Observability
+
+| Tool | Purpose and boundary | Reference |
+| --- | --- | --- |
+| Grafana | Operational dashboards and investigation. | [Standard: Observability](/standards/observability) |
+| Grafana Faro | Browser telemetry and tracing. | [Standard: Observability](/standards/observability) |
+| OpenTelemetry | Core/worker instrumentation and portable telemetry export. | [Standard: Observability](/standards/observability) |
+| OpenTelemetry Collector | Local OTLP intake, processing, and downstream export. | [Guide: Observability](/developer/observability) |
+| Grafana Tempo | Trace storage in the local observability stack. | [Guide: Observability](/developer/observability) |
+| Prometheus | Metric collection and storage in the local stack. | [Guide: Observability](/developer/observability) |
+| Docker Compose | Lifecycle of the checked-in local observability stack. | [Guide: Local observability](/operate/observability) |
+
+## Development and verification
+
+| Tool | Purpose and boundary | Reference |
+| --- | --- | --- |
+| Node.js and pnpm | Runtime and workspace orchestration; the root manifest owns supported versions. | [Guide: Local setup](/operate/local-setup) |
+| TypeScript and tsx | Static compilation/typechecking and direct execution of TypeScript development processes and CLIs. | [Code: Core commands](https://github.com/coreyconner/snewse/blob/master/apps/core/package.json) |
+| Vite | Devour development/build integration and Clipper bundle builds. | [Guide: Run Devour](/operate/devour/run), [Guide: Clipper setup](/operate/web-clipper) |
+| Vitest | Source-level unit and component tests; Core's PostgreSQL integration suite has a separate lane. | [Guide: Devour verification](/operate/devour/verification), [Code: Core test configuration](https://github.com/coreyconner/snewse/blob/master/apps/core/vitest.config.ts) |
+| Storybook | Isolated Devour component scenarios and browser-based story checks. | [Guide: Devour verification](/operate/devour/verification) |
+| MSW | Story-owned HTTP fixtures for isolated UI scenarios. | [Guide: Devour verification](/operate/devour/verification) |
+| Playwright and Chromium | Real-browser Devour workflows and browser-backed story execution. | [Guide: Devour verification](/operate/devour/verification) |
+| Node test runner | Workspace tooling, source-package tests, and Core PostgreSQL integration tests. | [Code: Root commands](https://github.com/coreyconner/snewse/blob/master/package.json), [Code: Core commands](https://github.com/coreyconner/snewse/blob/master/apps/core/package.json) |
+| Dependency Cruiser | Executable checks for Core dependency direction. | [Standard: Dependency boundaries](/standards/dependency-boundaries) |
+| Oxlint and the local anti-slop plugin | Repository lint and type-aware checks, including custom Core rules. | [Code: Lint configuration](https://github.com/coreyconner/snewse/blob/master/.oxlintrc.json) |
+| Oxfmt | Repository formatting and its verification check. | [Code: Formatter configuration](https://github.com/coreyconner/snewse/blob/master/.oxfmtrc.json) |
+| Gitleaks | Secret scanning in the repository's Git hooks. | [Code: Hook configuration](https://github.com/coreyconner/snewse/blob/master/lefthook.yml) |
+| Lefthook | Local Git-hook configuration and checks. | [Code: Hook configuration](https://github.com/coreyconner/snewse/blob/master/lefthook.yml) |
+| GitHub Actions | Repository verification workflow and shared CI setup. | [Code: Verify workflow](https://github.com/coreyconner/snewse/blob/master/.github/workflows/verify.yml) |
+
+Core's [database-policy verifier](https://github.com/coreyconner/snewse/blob/master/apps/core/scripts/verify-database-policy.mjs)
+is an internal enforcement tool for the [persistence standard](/standards/persistence).
+Passing an executable check does not replace the owning standard.
+
+## Exceptions
+
+[Standards exceptions](/standards/exceptions) defines the approval process.
+[Exception records](/standards/exception-records) distinguishes active permission
+from closed historical allowances. Implementing agents cannot approve their own
+exceptions or expand an existing approval.

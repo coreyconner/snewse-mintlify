@@ -1,0 +1,91 @@
+---
+title: "Shared packages"
+description: "Find the shared contract, XML parser, browser-query, and utility owners."
+---
+
+SNEWSE's shared packages support different boundaries. Contracts describe what
+crosses application interfaces; the XML parser interprets captured source;
+Browser client supplies query helpers; Shared holds reusable utilities.
+Their location under `packages` does not make them interchangeable owners.
+
+## Contracts
+
+`@snewse/contracts` supplies public schemas and inferred TypeScript types used by
+Core, Devour, Studio, and Web Clipper. Those declarations describe wire data and
+submission formats. Database rows, provider payloads, and application presentation
+models have their own owners.
+
+Core operations determine what a request does. Its HTTP adapters attach validation
+and OpenAPI metadata to the route surface. The package's catalog names shared
+components and selected route references; generated OpenAPI comes from Core's
+registered routes rather than a second hand-maintained API specification.
+
+Use the [export map](https://github.com/coreyconner/snewse/blob/master/packages/contracts/package.json)
+to find a supported entry point, and the
+[catalog](https://github.com/coreyconner/snewse/blob/master/packages/contracts/src/catalog.ts)
+and [examples](https://github.com/coreyconner/snewse/blob/master/packages/contracts/src/examples.ts)
+for schema references and DTO examples. Examples are not database seed data.
+Product meaning remains with guides such as [Topics](/developer/core/topics),
+[Articles](/developer/core/articles), and [Manifest bundles](/developer/manifest/bundles).
+
+### Contract compatibility
+
+The [public-contract standard](/standards/contracts#compatibility) owns versioning, compatible changes, deprecation, and route-inventory requirements.
+
+## Article XML parser
+
+`@snewse/article-xml` translates source XML into ordered Grafs and figure references,
+plain text, and retained inline markup. Core uses it through a capture adapter.
+The package is independent of the other SNEWSE workspace packages and delegates
+XML parsing to its third-party parser dependency.
+
+The [Article XML guide](/developer/manifest/article-xml) owns format meaning and
+the distinction between XML-local validation and complete bundle validation.
+The package's [public exports](https://github.com/coreyconner/snewse/blob/master/packages/article-xml/src/index.ts)
+define the throwing and nonthrowing interfaces and issue shape. Producer
+serialization, Media existence checks, hashes, persistence, and intake error
+translation remain outside this package.
+
+## Browser client
+
+`@snewse/browser-client` supplies shared TanStack Query setup and API-error helpers
+to Devour, Studio, and Account. It is not a generated endpoint SDK: applications
+still own request functions, resource keys, contract parsing, and cache lifetime
+decisions tied to their sessions.
+
+The [query-client factory](https://github.com/coreyconner/snewse/blob/master/packages/browser-client/src/queryClient.ts)
+centralizes default freshness, garbage collection, refetch, and retry behavior.
+The [error helpers](https://github.com/coreyconner/snewse/blob/master/packages/browser-client/src/queryErrors.ts)
+retain HTTP status and request correlation while providing a safe display fallback
+for validation failures. Exact retry conditions and timing values stay in those
+implementations. [Devour state](/developer/devour/state) explains how the application
+combines these helpers with session admission and query ownership.
+
+## Shared utilities
+
+`@snewse/shared` contains helpers used across applications, including text, dates,
+identifiers, URLs, authorship, and storage-related calculations. It has no external
+runtime package dependencies, but that does not make every export browser-safe:
+cryptography and S3 signing use Node facilities.
+
+<Note>
+  Choose the relevant subpath from the
+  [Shared export map](https://github.com/coreyconner/snewse/blob/master/packages/shared/package.json).
+  Check the helper's runtime dependencies before using it in a browser path.
+</Note>
+
+The [source directory](https://github.com/coreyconner/snewse/tree/master/packages/shared/src)
+is the authority for individual helper behavior. Application services, database
+operations, and provider orchestration remain with their application owners.
+
+## Source and build entry points
+
+These packages expose development entries to TypeScript source and production
+entries to built JavaScript and declarations. A development run and a production
+consumer can therefore resolve different files for the same package name.
+
+Each package manifest owns its export conditions and test, typecheck, and build
+commands. Consult those declarations when diagnosing resolution or stale build
+output rather than inferring that a successful source test also rebuilt production
+artifacts. [Core architecture](/developer/core/overview) explains how the application
+composes the operations that consume these packages.

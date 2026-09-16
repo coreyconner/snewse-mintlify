@@ -1,0 +1,24 @@
+---
+title: "Topics"
+description: "How Devour presents Topic discovery, fixed Topic context, embedded Topic controls, and Article navigation."
+---
+
+Devour exposes one Topics domain through three surfaces: searchable Topics Explore, a fixed Topic context pane, and an embedded Topics block inside Article and Unit content. Core owns canonical Topic identity, assignment, discovery, and access rules; see [Topics](/developer/core/topics).
+
+## Topics Explore
+
+Topics Explore is a leading workspace surface. It owns search input, suggestions, committed Topic selection, the Article stream for that Topic, result-layout preference, and the relevant loading and error states. Search can display suggestions before a Topic is committed. Once committed, metadata and Article results determine the visible stream.
+
+The selected `topicKey` is part of the surface route state. The exact `/topics/:topicKey` entry route constructs this Explore state and replaces into the canonical workspace; it does not create a second Topics application. See [`TopicsExploreSurface`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/topics/explore/TopicsExploreSurface.tsx).
+
+## Fixed Topic context
+
+Selecting a Topic from an Article or Unit opens a fixed Topic context pane. It resolves Topic metadata and loads the Topic's Article stream. Selecting an Article asks workspace navigation to open that exact Article, so the Topics module does not own Article placement or access decisions.
+
+The fixed surface uses fallback label data only for presentation while metadata is loading. Authentication or unavailable metadata prevents the Article stream from presenting stale results. See [`TopicSurface`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/topics/topic/TopicSurface.tsx).
+
+## Embedded Topic controls
+
+The embedded Topics block receives already loaded Topic references from its host. It filters visible chips by the shared Article Topic categories and emits a typed Topic selection; it does not fetch or navigate by itself. Article and Unit adapters translate the selection into workspace context navigation.
+
+This split lets [`TopicsBlock`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/topics/blocks/TopicsBlock.tsx) render in both the Article footer and Unit Details without learning either pane's geometry. Topics presentation remains owner-local and uses the same neutral surface family in Explore and fixed Topic panes.

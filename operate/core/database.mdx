@@ -1,0 +1,52 @@
+---
+title: "Operate the Core database"
+description: "Back up, generate, apply, and verify Core PostgreSQL migrations with explicit data safeguards."
+---
+
+Core uses the PostgreSQL database selected by `DATABASE_URL`. Run database commands from the SNEWSE repository root and inspect that value before any command that reads or changes data.
+
+## Back up before a populated migration
+
+Prerequisites are a valid `DATABASE_URL` and either `pg_dump` on `PATH` or Docker. Run:
+
+```powershell
+pnpm db:backup
+```
+
+Success prints the backup method and a timestamped custom-format dump below `.db-backups/`. The command first tries local `pg_dump`; its Docker fallback uses `postgres:18-alpine` and maps a local database host to `host.docker.internal`.
+
+<Warning>
+  Creating a dump does not prove it can be restored. A populated-database change needs an explicit transition and restore plan appropriate to that environment. The repository does not provide a generic restore command.
+</Warning>
+
+## Generate a migration
+
+After intentionally changing the Drizzle schema, run from the repository root:
+
+```powershell
+pnpm db:generate
+```
+
+Drizzle Kit should write a new migration under `apps/core/drizzle`. Review the SQL and metadata before applying it. Generation compares schema declarations; it is not approval to change populated data.
+
+## Apply migrations
+
+After confirming the target database, backup, and reviewed migration:
+
+```powershell
+pnpm db:migrate
+```
+
+The command should complete with the migration recorded in the target database. The repository does not define a universal rollback command; use the reviewed transition and backup rather than inventing one during an incident.
+
+## Verify the database boundary
+
+This static policy check does not connect to the database:
+
+```powershell
+pnpm --filter @snewse/core database:policy:check
+```
+
+It should report no unapproved schema/query-policy drift. Core's general integration harness reads `DATABASE_URL` and refuses a URL whose database name does not contain `test`. The isolated Auth persistence proof reads `SNEWSE_AUTH_PERSISTENCE_TEST_DATABASE_URL`; when you run a gate that uses both settings, set both names to the same isolated test database. These tests truncate their owned tables. Never aim them at shared or populated data.
+
+The [Drizzle configuration](https://github.com/coreyconner/snewse/blob/master/apps/core/drizzle.config.ts), [backup CLI](https://github.com/coreyconner/snewse/blob/master/apps/core/src/infrastructure/postgres/cli/backup-database-cli.ts), [integration harness guard](https://github.com/coreyconner/snewse/blob/master/apps/core/src/infrastructure/postgres/postgres-integration-harness.ts), and [Auth persistence proof](https://github.com/coreyconner/snewse/blob/master/apps/core/src/infrastructure/auth/__tests__/persistence.integration.ts) own the executable behavior.

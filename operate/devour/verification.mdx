@@ -1,0 +1,31 @@
+---
+title: "Preview components and verify Devour"
+description: "Use Devour's unit, Storybook, browser, and production-build checks for the behavior under review."
+---
+
+Run these checks from the SNEWSE repository root after installing dependencies. Choose the narrowest check that exercises the contract you changed, then use broader checks when the change crosses layers.
+
+| Check | Command | What success demonstrates |
+| --- | --- | --- |
+| Unit and component tests | `pnpm --filter @snewse/devour test` | Devour's Vitest contracts pass. |
+| Production build | `pnpm --filter @snewse/devour build` | Types, Vite production output, dependencies, and the Topics lazy boundary pass. |
+| Storybook development | `pnpm --filter @snewse/devour storybook` | Component stories render interactively at the printed local URL. |
+| Static Storybook | `pnpm --filter @snewse/devour verify:storybook:static` | Storybook types and static build pass. |
+| Storybook browser suite | `pnpm --filter @snewse/devour verify:storybook:browser` | Storybook's Vitest browser checks pass. |
+| Full Storybook verification | `pnpm --filter @snewse/devour verify:storybook` | Dependencies, types, static build, and browser checks pass together. |
+| General browser suite | `pnpm --filter @snewse/devour test:e2e` | Chromium workflows pass against the fixture servers defined by Playwright. |
+| Annotation browser suite | `pnpm --filter @snewse/devour test:e2e:annotations` | Annotation workflows pass in Chromium, with tagged highlight coverage in Firefox and WebKit. |
+
+The browser commands start their own fixture servers on configured test ports. They do not prove a live database, real authentication, or provider-backed ingestion flow.
+
+When the `msw` version changes, regenerate Storybook's owned service worker from the repository root:
+
+```powershell
+pnpm --filter @snewse/devour exec msw init .storybook/public --save
+```
+
+Success updates `.storybook/public/mockServiceWorker.js`. Review and commit that generated file with the dependency change. The production Vite build does not serve `.storybook/public`.
+
+<Note>
+  Passing a component story proves the fixture state represented by that story. Use browser workflows for durable browser-only interaction contracts and a built preview for the production bundle itself.
+</Note>

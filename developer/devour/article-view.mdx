@@ -1,0 +1,35 @@
+---
+title: "Article view"
+description: "How Devour consumes composed Articles, renders structured content and media, and exposes Article capabilities."
+---
+
+The Article view consumes one exact Article ID and presents the Core Composer result without rebuilding domain structure in the browser. Core owns Article identity and composition semantics; see [Articles](/developer/core/articles), [Units and Grafs](/developer/core/units), and [Media](/developer/core/media).
+
+## Readiness controls the surface
+
+The surface distinguishes loading, missing session, unavailable private content, request failure, processing, failed composition, and ready content. Processing and failed results can still present captured source facts and their lifecycle message. Body-dependent actions become available only after a ready composition loads for the route's exact Article ID.
+
+This same ready boundary controls the Article capabilities registered with the app. Annotations and Wayfinder cannot use stale content from the Article that previously occupied the pane. See [`ArticleWorkspaceAdapter`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/app/workspace/surfaces/ArticleWorkspaceAdapter.tsx).
+
+## Render the composition in order
+
+The opening presentation includes the headline, optional deck, publication, publication time, and ordered captured authors. The body then follows the ready layout array in order:
+
+1. A Unit reference resolves to its canonical Unit and renders its ordered Grafs.
+2. A Media reference resolves to its associated Media resource and selects the renderer for that media type.
+3. Repeated layout references remain repeated blocks.
+4. Associated Media absent from the layout does not receive a trailing rendering pass.
+
+Missing references fail visibly. Devour does not fall back to the Unit array, generate IDs, turn statements or Media into Units, or normalize canonical Graf text. Each rendered Unit and Graf retains its canonical ID in the DOM. The mechanical mapping lives in [`articleBodyBlocks`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/article/surface/articleBodyBlocks.ts) and [`ArticleBody`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/article/surface/ArticleBody.tsx).
+
+## Media presentation
+
+Article Media chooses presentation from the authorized resource and its placement. Image, video, audio, podcast, transcript, and floating-player behavior remain Devour concerns; storage, access, associations, and byte delivery remain Core concerns.
+
+An Article audio version is a compact read-aloud affordance and does not repeat the Article title. A podcast is a distinct content block. Both use the shared custom audio player, which retains a native `audio` element for browser loading, error, and playback semantics. The dispatch boundary is in [`ArticleMedia`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/article/media/ArticleMedia.tsx).
+
+## Selection and surface capabilities
+
+Selection coordinates flatten Unit occurrences in Article layout order, skip Media blocks, and preserve each Unit's Graf order and exact text. The rendered Graf string receives no second quote conversion, trimming, whitespace collapse, or Unicode normalization. A meaningful selection preserves its exact whitespace as evidence, while a whitespace-only selection is invalid. The Article module owns native selection capture, neutral anchor projection, passage reveal, and Unit targeting. [Annotation interactions](/developer/devour/annotations) explains how the private annotation module consumes those capabilities; [annotation anchors](/developer/core/annotation-anchors) owns the server-side evidence and resolution model.
+
+The Article surface emits typed requests for Topic, Unit Details, and related-content navigation. The app adapter translates those requests into workspace transactions and publishes a pane-ID-scoped capability for mounted consumers. This keeps the Article surface independent of URL serialization and physical pane placement.

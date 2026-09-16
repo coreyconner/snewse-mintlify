@@ -1,0 +1,59 @@
+---
+title: "Visual language and styling"
+description: "How Devour expresses semantic color, typography, pane rhythm, motion, and elevation in current code."
+---
+
+Devour uses Tailwind utilities for owner-local presentation and a small conventional CSS layer for tokens, cascade contracts, global baselines, and selectors that cross rendered elements. This page explains the current implementation. It does not turn every checked-in value or legacy migration note into product policy.
+
+## Token and theme layers
+
+[`base.css`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/styles/base.css) declares literal color families, then maps them into semantic roles such as surface, rule, danger, success, and product accents. Components consume roles rather than raw palette values. Pane contexts remap a common shape of surface, ink, accent, rule, and interaction variables, allowing shared blocks to render within different products without importing product ownership.
+
+[`index.css`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/index.css) is the single Tailwind entry point. It exposes semantic roles as Tailwind theme values, retains Tailwind's native spacing multiplier, and defines shared motion, shadow, font, and pane-gutter utilities. Preflight supplies the native-element baseline; `base.css` adds deliberate app-wide defaults rather than a second reset.
+
+## Three typographic voices
+
+Devour assigns families by communicative role:
+
+| Voice | Current family | Main use |
+| --- | --- | --- |
+| Editorial | Newsreader | Long-form Article prose and decks. |
+| Interface | IBM Plex Sans | Controls, labels, stream headlines, and supporting prose. |
+| Instrument | JetBrains Mono | Article headline and open-background metadata. |
+
+Current enclosed labels use the interface family, while small open-background metadata can use mono. Pane titles render in sentence case; block labels use uppercase and tracking. Stream headlines share one presentation component. The checked-in black marker treatment appears on the Article title rather than stream rows or pane headings. These are current visual choices; formal typography policy remains deferred.
+
+The long-form Article body consumes scoped family, size, leading, and measure variables. Other Article chrome and context surfaces remain fixed product roles. Exact values and fallbacks belong to the token source.
+
+## Spacing and pane rhythm
+
+Current product layout uses Tailwind's integer and half-step spacing utilities, enforced by the style guard described below. `--spacing-pane-gutter` names the outer frame of a pane and resolves in context, so an Article pane can use a wider frame than a narrow context pane. Smaller owner-local gaps separate parts of one block.
+
+Long-form content aims for one perceived Article break, but the written CSS values can differ because text leading, grid gaps, borders, and image edges contribute differently. Units remain semantically addressable without becoming visible as uneven paragraph rhythm.
+
+Pane scroll regions own scrolling and clipping. Individual blocks own both logical edges through a normal gutter, intentional full bleed, or an explicit connection to a neighbor. See [pane layout and interaction](/developer/devour/pane-layout) for the scrolling contract.
+
+## Utilities and conventional CSS
+
+Utilities remain with the element whose owner understands the presentation. Conventional CSS is retained when the real interface is the cascade or a selector spanning more than one element, including:
+
+- semantic and scoped custom-property definitions;
+- cross-surface layout contracts;
+- keyframes and coordinated animation;
+- third-party or generated markup;
+- substantial pseudo-element rendering;
+- inherited, preference-ready Article body typography.
+
+Unlayered semantic CSS outranks layered utilities, so obsolete selectors must be removed when a surface moves to utilities. Current automated guards reject product color literals outside the palette, off-grid fixed spacing, literal transition durations, fixed arbitrary font sizes, and stylesheet-order drift. The executable checks live in [`stylesGuard.test.ts`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/__tests__/stylesGuard.test.ts).
+
+## Motion and elevation
+
+Shared transition roles represent fast, base, and slow interaction durations; components consume the role and preserve reduced-motion behavior. Keyframe timing remains owner-local when the animation mechanism requires it.
+
+Elevation describes the visual gap from the surface directly beneath an element. The monotonic shadow scale runs from a hint of lift to modal overlays. Adjacent workspace panes remain flat and use hairline separation; popovers, menus, floating media, the Command Palette, and the image lightbox are examples of detached surfaces that can use elevation. Selection fills, inset rules, and focus washes are surface treatments rather than elevation.
+
+## Fonts and icons
+
+The root route loads web fonts through document-head preconnect and stylesheet links. Product icons come from Phosphor React; custom SVG remains for SNEWSE marks, content graphics, and visualizations. The current head configuration is in [`__root.tsx`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/routes/__root.tsx).
+
+Shared source brand assets live in [`assets/brand`](https://github.com/coreyconner/snewse/tree/master/assets/brand) so SNEWSE applications can use the same product marks. `wordmark.svg` preserves the source colors, while `wordmark-white.svg` supplies white fills for dark rail and frame backgrounds.

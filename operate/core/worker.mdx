@@ -1,0 +1,30 @@
+---
+title: "Run the manifest worker"
+description: "Start a bounded or continuous manifest worker and recognize its safe shutdown and progress signals."
+---
+
+Manifest worker commands perform real queue claims, provider calls, stale-run recovery, and publication against the database selected by the Core environment. Inspect queued, retryable, and expired processing work before starting one; there is no run-ID selector.
+
+## Choose an execution mode
+
+Run these commands from the SNEWSE repository root with Core's database, storage, and semantic-provider configuration available.
+
+| Command | Use |
+| --- | --- |
+| `pnpm --filter @snewse/core manifest:worker` | Startup recovery, at most one claim, then exit after cleanup. |
+| `pnpm --filter @snewse/core manifest:worker:daemon --max-iterations 1` | A bounded daemon pass with an explicit iteration limit. |
+| `pnpm dev:manifest-worker` | A watched, continuous development daemon that can consume the real queue. |
+
+The daemon defaults to one concurrent job, a one-second polling interval, and periodic stale recovery. Exact flags and environment names live in the [daemon configuration](https://github.com/coreyconner/snewse/blob/master/apps/core/src/ingestion/cli/worker-daemon-config.ts).
+
+<Warning>
+  Worker-once and daemon startup recovery can mutate runs beyond the one you expect. If unrelated eligible work exists, stop and establish a bounded database or queue scope before starting the worker.
+</Warning>
+
+## Recognize progress and stop cleanly
+
+The worker emits sanitized summaries for claims, outcomes, recovery, and shutdown. A receipt's queued status only proves intake created work; worker output and Article composition status distinguish processing from publication.
+
+Send `Ctrl+C` once to request shutdown. The worker stops polling, waits for active work, removes its signal handlers, and closes PostgreSQL and telemetry. Do not kill the process merely because provider work takes time; publication is fenced and completes atomically only while the lease remains valid.
+
+Compiled entry points are available after `pnpm --filter @snewse/core build` by using the corresponding `:compiled` script. The [worker execution guide](/developer/core/ingestion/worker) owns claims, leases, retries, and recovery semantics.

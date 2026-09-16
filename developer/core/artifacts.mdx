@@ -1,0 +1,86 @@
+---
+title: "Artifacts"
+description: "How Core stores private JSON snapshots and explicit Article associations without interpreting producer documents."
+---
+
+An Artifact is a private snapshot with a title and an opaque JSON payload. Core
+owns its storage and authenticated ownership. The application that creates the
+payload owns its document meaning, presentation, and any references inside it.
+
+## Snapshot and association
+
+The payload is immutable through the current API. Renaming changes only the title;
+it does not rewrite the snapshot or its Article associations. Core assigns the
+Artifact ID and creation time and keeps the owner identity out of the public result.
+
+An Artifact can have zero or more explicit Article associations. They support
+Article-scoped retrieval of the owner's saved snapshots. Core does not discover
+associations by inspecting the payload, and an association does not certify a
+citation, establish provenance, or grant Article access.
+
+<Note>
+  An Article ID inside arbitrary payload JSON has no special authorization or
+  association meaning. The explicit association list is checked separately.
+</Note>
+
+The [Artifact schema](https://github.com/coreyconner/snewse/blob/master/apps/core/src/infrastructure/postgres/schema/artifact.ts)
+defines the snapshot and association tables. [User Access](/developer/core/user-access)
+defines access to canonical Articles.
+
+## Creation boundary
+
+<Steps>
+  <Step title="Validate the snapshot request">
+    The HTTP boundary validates the title, payload, and explicit Article IDs
+    against the shared contract. The payload must be compatible with PostgreSQL
+    JSONB; document-specific structure is outside this validation.
+  </Step>
+  <Step title="Check each Article association">
+    The creation operation checks the authenticated user's direct access to
+    every named Article. An unavailable association prevents creation. An empty
+    association list requires no Article access check.
+  </Step>
+  <Step title="Commit the snapshot and associations">
+    One transaction inserts the Artifact and its association rows. Either the
+    complete snapshot relationship commits or the transaction rolls back.
+  </Step>
+</Steps>
+
+Access checks happen before the insertion transaction. This is a creation-time
+precondition, not a permanent coupling between the Artifact and an Article grant.
+The [creation operation](https://github.com/coreyconner/snewse/blob/master/apps/core/src/artifacts/operations/create-artifact.ts)
+is the authority for that sequence.
+
+## Listing and renaming use Artifact ownership
+
+The Article-scoped list intersects explicit associations with the current user's
+Artifacts. It returns snapshots in descending creation order with the Artifact ID
+as a stable tie-breaker. A list without matches is empty. It does not recheck
+Article access, so an owner's saved snapshots remain retrievable through that
+association after their Article access changes.
+
+Renaming also checks Artifact ownership. Unknown and unowned targets share the
+same private not-found result. An unchanged title returns the existing snapshot;
+a changed title leaves payload and creation time intact.
+
+See [listing](https://github.com/coreyconner/snewse/blob/master/apps/core/src/artifacts/operations/list-artifacts-for-article.ts)
+and [renaming](https://github.com/coreyconner/snewse/blob/master/apps/core/src/artifacts/operations/rename-artifact.ts)
+for the owner-scoped operations. Their authorization is distinct from navigating
+to the associated [Article](/developer/core/articles).
+
+## Storage validation is not document validation
+
+Core accepts a non-null JSON value as the payload; nested nulls are allowed.
+Storage validation rejects values that JSONB cannot safely represent and bounds
+container nesting. It does not validate document blocks, citations, model output,
+or a producer's execution protocol.
+
+The [shared Artifact contract](https://github.com/coreyconner/snewse/blob/master/packages/contracts/src/artifact.ts)
+owns exact title, association, JSON safety, and nesting constraints. The
+[HTTP adapter](https://github.com/coreyconner/snewse/blob/master/apps/core/src/artifacts/http/create-artifact-routes.ts)
+owns body limits, session checks, response shapes, and error mapping.
+
+The current routes retain a Wayfinder path prefix. That location does not give
+Core responsibility for running a producer workflow or interpreting its output.
+Artifact storage remains an independent capability; a producer must establish
+its own supported document and runtime behavior.

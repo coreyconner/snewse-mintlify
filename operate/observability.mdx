@@ -1,0 +1,75 @@
+---
+title: "Use local observability"
+description: "Start the optional local OpenTelemetry stack and correlate Core requests and manifest-worker runs."
+---
+
+The optional Docker stack receives Core OpenTelemetry data and exposes traces and metrics locally. It does not run the SNEWSE applications, PostgreSQL, MinIO, or a log backend.
+
+## Start the stack
+
+Prerequisites are Docker with Compose and free local ports. From the SNEWSE repository root:
+
+```powershell
+pnpm observability:config
+pnpm observability:up
+```
+
+The first command should render a valid Compose configuration. The second should start the Collector, Tempo, Prometheus, and Grafana containers.
+
+Configure the Core process with:
+
+```text
+OTEL_SDK_DISABLED=false
+OTEL_SERVICE_NAME=snewse-core
+OTEL_RESOURCE_ATTRIBUTES=service.namespace=snewse,deployment.environment.name=development
+OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_LOGS_EXPORTER=none
+OTEL_TRACES_SAMPLER=parentbased_traceidratio
+OTEL_TRACES_SAMPLER_ARG=1
+```
+
+Start Core from the repository root with `pnpm dev:core`, request `/api/healthz`, and open Grafana at `http://127.0.0.1:3001`. The **SNEWSE Core Overview** dashboard should receive HTTP metrics; Tempo Explore can search `service.name = snewse-core`.
+
+| Service | Local address |
+| --- | --- |
+| Grafana | `http://127.0.0.1:3001` |
+| Prometheus | `http://127.0.0.1:9090` |
+| Tempo | `http://127.0.0.1:3200` |
+| OTLP HTTP | `http://127.0.0.1:4318` |
+| OTLP gRPC | `127.0.0.1:4317` |
+
+Use receipt `requestId` and `runId` values to correlate intake and worker signals. Telemetry export failures are non-blocking, so missing traces do not by themselves prove the application request failed.
+
+The checked-in Compose configuration enables anonymous Grafana admin access for
+local development. The [Compose source](https://github.com/coreyconner/snewse/blob/master/infra/observability/compose.yaml)
+owns that setting and the service ports; it is not a hosted deployment configuration.
+
+## Hosted export
+
+Core also accepts the standard OTLP exporter settings for a hosted backend.
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` to its endpoint and provide authorization through
+`OTEL_EXPORTER_OTLP_HEADERS`. Log export is separately enabled with
+`OTEL_LOGS_EXPORTER=otlp`; the local example keeps it disabled because the local
+stack has no log backend. Credentials stay in process configuration.
+
+Signal-specific `OTEL_EXPORTER_OTLP_TRACES_*`, `OTEL_EXPORTER_OTLP_METRICS_*`,
+and `OTEL_EXPORTER_OTLP_LOGS_*` settings belong to the exporter configuration.
+The [Core telemetry runtime](https://github.com/coreyconner/snewse/blob/master/apps/core/src/infrastructure/observability/runtime.ts)
+and [environment schema](https://github.com/coreyconner/snewse/blob/master/apps/core/src/infrastructure/runtime/core-env.ts)
+identify the current integration; retired `SEMANTIC_NEWS_OTEL_*` aliases are not supported.
+
+## Inspect and stop
+
+From the repository root:
+
+```powershell
+pnpm observability:logs
+pnpm observability:down
+```
+
+The first command prints container logs. The second removes containers while retaining the data volumes. `pnpm observability:reset` also deletes Grafana, Prometheus, and Tempo volumes; use it only when you intend to discard local observability history.
+
+<Warning>
+  Apply the [observability telemetry boundary](/standards/observability#telemetry-boundary) to local telemetry too. The local stack is not an AI evidence store.
+</Warning>

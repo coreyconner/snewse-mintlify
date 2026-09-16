@@ -1,0 +1,49 @@
+---
+title: "Pane layout and interaction"
+description: "How Devour places, focuses, scrolls, and controls workspace panes across viewport sizes."
+---
+
+Devour renders the ordered workspace state as one leading pane, one primary Article pane, and one context pane. These are placement roles, not domain types. The workspace derives each role from a surface kind, while each surface remains responsible for its own content and actions. See [workspace navigation](/developer/devour/workspace-navigation) for the URL-backed order and navigation transactions.
+
+## Placement and responsive behavior
+
+At the widest layout, the leading, Article, and context panes can appear together. The leading pane has a fixed width, the Article pane owns the main reading measure, and the context pane stays narrower. When space decreases, a context pane replaces the visible Article pane before the layout collapses to one visible pane. When the leading pane is present at the smallest width, it is the visible pane.
+
+Those decisions use container width, so an embedded workspace responds to its own available space rather than the browser viewport. The exact grid tracks and thresholds live in [`WorkspacePaneLayout`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/app/workspace/WorkspacePaneLayout.tsx).
+
+<Note>
+  A surface does not encode "left," "main," or "context" placement in its route state. Workspace placement can change without changing the surface's durable identity.
+</Note>
+
+## Pane identity and focus
+
+The pane ID is the React identity and the DOM focus target. Reordering panes, changing the focused descriptor, or closing a sibling preserves local component state for surviving IDs. A render failure is also contained to the individual pane.
+
+The focused pane in workspace state records durable selection. It does not automatically move DOM focus. DOM focus moves only after an interaction explicitly requests it. Opening a context pane side by side therefore leaves focus in the Article; opening the same context where it replaces the Article moves focus to the new pane. Closing annotations, Unit Details, related content, or a Wayfinder result returns through the appropriate workspace or Article capability.
+
+## Scrolling and shared chrome
+
+Every surface renders inside the neutral [`Pane`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/components/blocks/pane/Pane.tsx) primitive. A surface chooses one of two scrolling arrangements:
+
+- `PaneBody` owns vertical scrolling and marks itself with `data-pane-scroll-region`.
+- `PaneBody` forms a bounded shell, and one child viewport owns the marker and scrolling.
+
+Anchored controls use the nearest marked scroll region for clipping, collision checks, and dismissal. This keeps selection tools and other floating UI independent of a particular product surface.
+
+Workspace supplies physical pane chrome. Product-specific buttons remain explicit surface content composed with `PaneToolbar`; the workspace does not infer actions from a surface kind.
+
+## Global keyboard controls
+
+Global shortcuts call the same operations as visible controls:
+
+| Key | Result |
+| --- | --- |
+| `L` | Open User Library as the leading pane. |
+| `T` | Open Topics Explore as the leading pane. |
+| `M` | Expand or collapse the navigation rail. |
+| `Mod+K` | Open or close the Command Palette. |
+| `Escape` | Dismiss the active palette or expanded navigation rail. |
+
+Bare-letter shortcuts ignore inputs, text areas, selects, and editable content, and require a key reset to prevent repeated actions while held. `Mod+K` remains available while typing because it opens the global command surface. The registrations are visible in [`WorkspaceViewport`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/app/workspace/WorkspaceViewport.tsx) and [`CommandPalette`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/command-palette/CommandPalette.tsx).
+
+Devour does not currently provide shortcut settings or user remapping.

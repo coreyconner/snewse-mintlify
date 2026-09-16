@@ -1,0 +1,94 @@
+---
+title: "Article XML"
+description: "The ordered source body inside a Manifest and its boundary with canonical Core content."
+---
+
+Article XML carries the body of a captured Article before Core derives its
+canonical composition. It combines ordered text elements with references to
+Media described by the [Manifest](/developer/manifest/bundles).
+
+## Ordered Grafs and figures
+
+The document has an `article` root whose direct elements are `graf` and `figure`.
+A Graf carries a source UUID and text, with optional inline XML. A figure names
+a Media reference and may carry caption and credit text. Their order records
+the source body's interleaving of text and Media.
+
+```xml
+<article>
+  <graf id="019b7a17-55f2-766f-8c1d-a79f89e46f01">The first paragraph.</graf>
+  <figure media-id="019b7a17-55f2-766f-8c1d-a79f89e46f02">
+    <caption>A view of the harbor.</caption>
+    <credit>Example photographer</credit>
+  </figure>
+  <graf id="019b7a17-55f2-766f-8c1d-a79f89e46f03">The next paragraph.</graf>
+</article>
+```
+
+This illustrates XML structure only. A full submission also needs a valid
+Manifest, a matching Media entry, and any required file bytes. A figure's
+`media-id` connects it to that entry; it does not embed the Media itself.
+
+Source ordering and the final Article layout are related but distinct. Semantic
+processing groups Grafs into Units and publishes the canonical layout. See
+[semantic processing and publication](/developer/core/ingestion/semantics), then
+[Articles](/developer/core/articles) for how applications consume it.
+
+## Text and markup serve different purposes
+
+The XML parser derives a Graf's plain text from its XML text content. It normalizes
+whitespace for capture comparison and retains a serialized representation of
+inline XML separately. That retained markup is not a byte-for-byte copy of the
+original document. Article-level text joins the ordered Graf plain text; figure
+captions and credits do not become Graf body text.
+
+<Note>
+  XML ingestion normalization and public Graf text are different boundaries.
+  Consumers of Core responses use the canonical `text` described in
+  [Units and Grafs](/developer/core/units), rather than reconstructing display
+  text or annotation coordinates from submitted XML.
+</Note>
+
+The [parser implementation](https://github.com/coreyconner/snewse/blob/master/packages/article-xml/src/index.ts)
+is authoritative for exact normalization and serialization. Keeping those
+transformations in one implementation avoids separate parser behavior in each
+ingestion caller.
+
+## Validation has two boundaries
+
+<Steps>
+  <Step title="Validate the XML document">
+    The shared parser checks XML syntax and local Article structure: the root,
+    supported top-level nodes, at least one Graf, Graf identifiers and uniqueness,
+    and a nonempty Media reference on each figure. Failures return issue paths
+    locating the relevant XML or content element.
+  </Step>
+  <Step title="Validate the submission around it">
+    Core checks the Manifest and supplied content together, including whether
+    figure references correspond to declared Media and whether required files
+    are available. It adds capture hashes, canonical reference mapping, and
+    ingestion error translation outside the parser.
+  </Step>
+</Steps>
+
+Passing XML-local validation therefore does not establish that a bundle can be
+captured. The [Core XML adapter](https://github.com/coreyconner/snewse/blob/master/apps/core/src/ingestion/capture/article-xml.ts)
+adds ingestion-owned information to parsed content; the complete intake path is
+explained in [submission and capture](/developer/core/ingestion/capture).
+
+## Format, parser, and producers
+
+The [Article XML parser package](/developer/packages#article-xml-parser) parses and validates XML-local meaning. It does
+not construct producer bundles, authorize users, verify Manifest Media existence,
+or persist Article state. Its
+[public exports](https://github.com/coreyconner/snewse/blob/master/packages/article-xml/src/index.ts)
+provide throwing and nonthrowing parse entry points.
+
+Clipper and Studio own their XML serialization. Core consumes the shared parser
+through its capture adapter. Devour renders structured API content after
+publication, so the shared format does not imply that every application directly
+imports the parser package.
+
+Version acceptance belongs to the [Manifest boundary](/developer/manifest/bundles#versions-and-historical-material).
+The parser's ability to read an XML document is not a promise that a historical
+bundle remains valid for public submission.

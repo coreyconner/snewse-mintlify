@@ -1,0 +1,29 @@
+---
+title: "Run and inspect the Core API"
+description: "Start Core locally and distinguish liveness, readiness, OpenAPI, and interactive API documentation."
+---
+
+Run Core from the SNEWSE repository root after installing dependencies and configuring the environment required by the routes you plan to use.
+
+```powershell
+pnpm dev:core
+```
+
+Core should listen at `http://127.0.0.1:5174` unless its runtime configuration selects another address.
+
+## Inspect the operational endpoints
+
+| Endpoint | Successful result means |
+| --- | --- |
+| `GET /api/healthz` | The Core HTTP process is alive. It does not test the database, auth provider, model providers, or object storage. |
+| `GET /api/readyz` | Required configured dependencies are ready. A dependency failure can return `503`. |
+| `GET /api/openapi.json` | The composed first-party OpenAPI 3.1 document is available. |
+| `GET /api/docs` | Scalar renders the first-party API document and Better Auth's generated schema. |
+
+OpenAPI and the interactive reference remain available without database configuration, so they are not substitutes for readiness.
+
+<Note>
+  A healthy API can still be unready. Use `/api/healthz` for process supervision and `/api/readyz` before sending product traffic.
+</Note>
+
+The [HTTP composition](https://github.com/coreyconner/snewse/blob/master/apps/core/src/app/create-http-app.ts), [health routes](https://github.com/coreyconner/snewse/tree/master/apps/core/src/infrastructure/http/health), and [documentation routes](https://github.com/coreyconner/snewse/blob/master/apps/core/src/infrastructure/http/openapi/documentation-routes.ts) are the implementation entry points. This guide does not define a production process supervisor or deployment topology.

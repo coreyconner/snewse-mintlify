@@ -1,0 +1,44 @@
+---
+title: "Sessions and submission"
+description: "How the Web Clipper authenticates, selects a Collection, submits a bundle, and consumes intake receipts."
+---
+
+The Clipper submits through the current SNEWSE account session. It blocks Collection loading and submission when the session is signed out, disabled, unverified, or unreadable.
+
+## Session handoff
+
+The [session owner](https://github.com/coreyconner/snewse/blob/master/apps/web-clipper/src/lib/authSession.ts) starts a Chrome identity web-auth flow at the configured Account app. It supplies an extension redirect URL with a random state value, validates the returned origin, path, and state, and then reads the Better Auth session from Core with credentials included.
+
+The extension validates the session values it consumes while preserving Better Auth's native session representation. Account provides the sign-in experience; Core remains the auth runtime. [Authentication and identity](/developer/core/authentication) explains the shared identity boundary.
+
+## Local settings and permissions
+
+The Clipper stores its configured Account and API base URLs in
+`chrome.storage.local`. Its settings adapter falls back to extension-origin
+`localStorage` only when Chrome storage is unavailable in a local test context.
+It does not use synchronized storage, and the settings record contains URLs
+rather than session credentials or API keys.
+
+The extension manifest grants `identity` for the Account handoff, `storage` for
+these settings, and `activeTab` plus `scripting` for capture. Its checked-in host
+permissions cover the local Core origins only. Supporting another API origin
+requires a corresponding extension-permission and authentication design; see
+[deployment origins](/operate/deployment-origins).
+
+## Collection intent
+
+After authentication, the popup loads the user's Collections from `/api/collections`. The user can omit placement, choose an existing Collection by ID, or request creation by name. The resulting `collectionIntent` is a sibling of the Manifest in the request payload.
+
+Collection intent is not provenance and is absent from downloaded ZIPs. [Collections](/developer/core/collections) owns placement meaning, while [User Access](/developer/core/user-access) owns acquisition and grants.
+
+## Request and receipt
+
+The [submission builder](https://github.com/coreyconner/snewse/blob/master/apps/web-clipper/src/lib/submitBundle.ts) validates the payload before constructing `FormData`. It sends the payload, Article XML, and each resolved Media file to `POST /api/ingestion/manifest-bundles` with browser credentials included.
+
+The Clipper parses successful responses with the shared intake schema. A receipt distinguishes a new, changed, or unchanged Article resolution; reports acquisition and Article status; carries request and schema identifiers; and can identify a queued run. New or changed content can be accepted while semantic publication remains pending.
+
+<Note>
+  A successful receipt confirms the completed intake stages reported in that receipt. It does not mean background semantic publication has finished. See the [ingestion lifecycle](/developer/core/ingestion/overview) and [capture guarantees](/developer/core/ingestion/capture).
+</Note>
+
+API failures retain the HTTP status and safe validation issues when the server supplies them. Network failures, malformed response envelopes, and invalid local settings become explicit popup errors. Secret values are redacted from displayed server messages.

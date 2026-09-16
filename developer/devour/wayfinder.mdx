@@ -1,0 +1,36 @@
+---
+title: "Wayfinder and Command Palette"
+description: "The implemented Devour command, status, and result interfaces—and the current limit of their service boundary."
+---
+
+Devour contains an implemented Command Palette, Wayfinder status surface, and Wayfinder result pane. The client assembles context, models submissions, attempts run and saved-result calls, and renders typed results. Current Core registers private Artifact create, list, and rename routes, but it does not register the run or saved-result routes that the Devour client calls. Core therefore does not provide a live Wayfinder run, stream, or recall flow.
+
+<Warning>
+  The checked-in frontend is present, but the current Core service cannot complete its run or recall flow. An external replacement service and its deployment owner are not identified in current code.
+</Warning>
+
+## Command Palette and command context
+
+The Command Palette is an app command surface opened with `Mod+K`. It can navigate to User Library or Topics, and it can prepare Wayfinder intents. It is not a chat session.
+
+**Command Context** is material explicitly shown in the palette as input. A ready mounted Article can register the current Article as the **originating Article**, including its exact route locator and presentation facts. **Summarize** is the user-facing intent for a source-grounded recomposition of that Article. An ask intent also carries explicit instruction text. Submission validation and replacement decisions occur before execution begins.
+
+See [`CommandPalette`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/command-palette/CommandPalette.tsx) and the Article registration in [`ArticleWorkspaceAdapter`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/app/workspace/surfaces/ArticleWorkspaceAdapter.tsx).
+
+## Status and result presentation
+
+The **Wayfinder Status Control** is a compact shell-level surface for request state and actions outside the palette. It is separate from the result pane.
+
+The **Wayfinder Result Pane** is an ordinary workspace context pane for one **Focused Wayfinder Artifact**. A result is block-composed: each **Wayfinder Artifact Block** is one typed part, such as generated commentary, source material, or a related Article. A block is not independently an Artifact. Source quotes can use the originating Article capability to focus the Article and select the cited Unit.
+
+The app-owned [`WayfinderWorkspacePresentationBridge`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/app/workspace/WayfinderWorkspacePresentationBridge.tsx) opens or updates the result descriptor. [`WayfinderResultSurface`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/wayfinder/results/WayfinderResultSurface.tsx) owns result and support presentation; workspace owns placement and closing behavior.
+
+## Current service boundary
+
+The frontend API adapter issues credentialed requests to `/api/wayfinder/runs` and `/api/wayfinder/recompose/saved`. It validates responses with transitional Wayfinder contracts and models transport, protocol, and lifecycle failures. The exact request and event handling remain in [`wayfinderApi`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/wayfinder/run/wayfinderApi.ts).
+
+Current [`createCoreHttpApp`](https://github.com/coreyconner/snewse/blob/master/apps/core/src/app/create-http-app.ts) mounts only the Artifact router under the Wayfinder URL prefix. That router supports creating an Artifact, listing Artifacts associated with an Article, and renaming an Artifact. It contains no run, streaming, or saved-recomposition handler; see [`createArtifactRoutes`](https://github.com/coreyconner/snewse/blob/master/apps/core/src/artifacts/http/create-artifact-routes.ts).
+
+Core [Artifacts](/developer/core/artifacts) are an independent storage capability. An originating Article is the evidence target captured for a Wayfinder interaction; it is not the same concept as Core Artifact associations, which can include zero or multiple Articles.
+
+An external service could implement the client endpoints, but current code does not identify such a service or its deployment owner.

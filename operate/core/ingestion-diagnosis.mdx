@@ -1,0 +1,27 @@
+---
+title: "Diagnose ingestion failures"
+description: "Trace an ingestion request through capture and worker publication using supported identifiers and signals."
+---
+
+Start with the submission receipt or error response. Preserve its `requestId`, and when present its `articleId`, `runId`, resolution, Article status, and run status. These identifiers connect the HTTP request to sanitized API and worker telemetry without copying source content into logs.
+
+## Locate the failing stage
+
+| Evidence | Likely stage | Supported next step |
+| --- | --- | --- |
+| HTTP `400` | Multipart, payload, Manifest, or content validation | Correct the reported safe validation issue and resubmit. |
+| HTTP `401` or `403` | Missing identity or insufficient API-key permission | Restore a valid session or use a credential with the required permission. |
+| HTTP `404` for Collection intent | The requested private Collection is unavailable | Select an accessible Collection or omit placement, then retry the request. |
+| HTTP `413` | Request exceeded Core's bounded body limit | Reduce supplied files or content before resubmitting. |
+| HTTP `503` during intake | A required dependency such as Media storage is unavailable | Check `/api/readyz` and restore the named dependency before retrying. |
+| Receipt shows queued or processing | Capture succeeded; background publication remains open | Correlate the `runId` with worker output and Article composition status. |
+| Worker marks retryable | Publication failed before terminal exhaustion | Let the supported worker lifecycle honor its due time and retry. |
+| Worker marks failed | The run reached a terminal failure | Preserve identifiers and sanitized failure classification for operator review. |
+
+The `ingestion.capture.inconsistent-readiness` diagnostic records request ID, Article ID, readiness, and run status when those states disagree. It deliberately excludes captured content and performs no recovery mutation.
+
+<Warning>
+  Do not use standalone stale recovery as a diagnostic probe. It mutates eligible runs. Do not edit lifecycle rows manually or invent a requeue command; the repository exposes no general run-specific recovery CLI.
+</Warning>
+
+If you need to observe a queue after establishing an authorized scope, use [the manifest worker guide](/operate/core/worker). [Capture and submission](/developer/core/ingestion/capture) explains which intake commits survive later errors, while [worker execution](/developer/core/ingestion/worker) owns retry and terminal-state meaning.

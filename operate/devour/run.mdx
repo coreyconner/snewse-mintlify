@@ -1,0 +1,61 @@
+---
+title: "Run and preview Devour"
+description: "Run Devour with its Core proxy in development or serve the built Vite output for local preview."
+---
+
+Use the SNEWSE repository root for both workflows. Install workspace dependencies first. Core must be reachable for session and product requests; it defaults to `http://127.0.0.1:5174`.
+
+## Development server
+
+Start Core in one terminal:
+
+```powershell
+pnpm dev:core
+```
+
+Start Devour in another terminal, also from the repository root:
+
+```powershell
+pnpm dev:devour
+```
+
+Devour should listen on `http://127.0.0.1:5173`. Its Vite server proxies relative `/api/*` and `/media/*` requests to `SEMANTIC_NEWS_CORE_HTTP_URL`, which defaults to Core's local address.
+
+For a local-network smoke test, run from the repository root:
+
+```powershell
+pnpm --filter @snewse/devour dev --host 0.0.0.0 --port 5173
+```
+
+Set `SEMANTIC_NEWS_ALLOWED_HOSTS` when you need to restrict accepted hostnames. Account links derive port `5176` on the current host unless `SEMANTIC_NEWS_ACCOUNT_URL` selects a fixed Account origin.
+
+## Built Vite preview
+
+Build first, then start Vite's preview server. Run both commands from the SNEWSE repository root:
+
+```powershell
+pnpm --filter @snewse/devour build
+pnpm --filter @snewse/devour preview
+```
+
+The build script first builds Devour's workspace dependencies, so this is also the supported sequence in a fresh checkout. It should finish with Devour's production output in `apps/devour/dist` and pass the Topics lazy-boundary check. The preview command should print its listening URL; with Vite defaults it is normally `http://localhost:4173`. It serves the already-built output and does not rebuild when source files change.
+
+Vite preview inherits the configured `/api` and `/media` rules from `server.proxy` when `preview.proxy` is unset. Keep Core running at the configured target; a separate reverse proxy is not required for this local preview. See [Vite preview proxy defaults](https://vite.dev/config/preview-options#preview-proxy). Session admission still depends on the preview origin being trusted by Core.
+
+For authenticated local inspection with Core's development defaults, stop the
+Devour development server and reuse its port. From the repository root:
+
+```powershell
+pnpm --filter @snewse/devour preview --port 5173 --strictPort
+```
+
+Open `http://127.0.0.1:5173`. The strict-port option fails if that port is occupied
+instead of silently choosing another origin. The default preview port `4173` is
+outside Core's built-in development origin range; to keep that port, explicitly
+configure its origin through [Core's origin settings](/operate/deployment-origins).
+
+<Note>
+  The preview server is a local inspection tool. The repository does not define it as the production process manager or settle the production API proxy topology.
+</Note>
+
+The [Vite configuration](https://github.com/coreyconner/snewse/blob/master/apps/devour/vite.config.ts) owns current host, proxy, Account URL, and browser-observability settings. Use [deployment origins](/operate/deployment-origins) before carrying local proxy assumptions into deployment.

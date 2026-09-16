@@ -1,0 +1,59 @@
+---
+title: "Runtime validation"
+description: "Zod validation at untrusted input boundaries and established types within internal application flow."
+---
+
+## Untrusted input boundaries
+
+**Zod** validates untrusted input with a complete schema owned by the accepting
+boundary. Validation occurs once, at the first boundary that owns its provenance.
+An API request is a primary example: the API boundary validates it before the
+application uses the resulting typed value.
+
+Other inputs can have their own provenance boundary, such as provider responses,
+environment configuration, imported content, or historical JSONB whose shape
+has not been established. The reason for validation is the untrusted input,
+not the fact that a value crossed a function, module, or directory boundary.
+
+<Note>
+  Internal boundaries preserve established trust. A typed value passing from a
+  route to an operation, between internal operations, or out of a trusted typed
+  database query retains its validated type. Revalidation requires a genuinely
+  separate trust boundary.
+</Note>
+
+## Validated types
+
+After successful validation, the typed result continues through normal application
+flow. Unchecked `unknown` values remain confined to the accepting boundary.
+
+Complete boundary schemas establish product validity; runtime `typeof` checks,
+casts, unknown-typed dictionaries, and local field-parser families are not
+substitutes for that schema. A generic
+JSON-shape check is not a replacement for the owning product schema.
+
+The standard `cause?: unknown` error contract is allowed. Any other necessary
+deviation requires explicit maintainer approval through the
+[exception process](/standards/exceptions).
+
+## Persisted structured data
+
+Externally produced or historical JSONB has an explicit static type and runtime
+validation at its ingress boundary. A static annotation alone cannot establish
+the shape of untrusted historical data.
+
+This does not require parsing every database result. Once provenance has been
+established and the value comes from a trusted typed source, that type governs its use.
+The [database type standard](/standards/persistence#database-types) owns Drizzle
+inference and the narrow role of `drizzle-orm/zod`.
+
+## Schema ownership
+
+[Public request and response schemas](/standards/contracts) belong to their wire
+contract owner. Transport code handles transport concerns, while the boundary
+owning product input supplies its complete schema. Shared infrastructure relies
+on that validated result without a second generic validation schema.
+
+Current [HTTP behavior](/developer/core/http#validation-and-errors) explains the
+transport implementation. [Exception records](/standards/exception-records)
+distinguish historical handoffs from currently permitted deviations.

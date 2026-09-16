@@ -1,0 +1,24 @@
+---
+title: "User Library and Collections"
+description: "How Devour loads accessible Articles, manages Collection selection, and opens content from the User Library."
+---
+
+User Library is Devour's leading surface for browsing accessible Articles. It combines an Article query stream with the user's Collection list, then delegates access meaning and Collection membership to Core. See [User Access](/developer/core/user-access), [Collections](/developer/core/collections), and [Article queries](/developer/core/article-queries).
+
+## Durable Collection selection
+
+The pane descriptor stores `collectionId`. The value is either the synthetic `library` selection or an exact Collection UUID. Changing the picker updates that surface state through workspace navigation, so reload and browser history preserve the selected Collection.
+
+The `library` selection queries all Articles available to the signed-in user. A Collection selection adds the Collection filter to the same Article-query path. Collection membership organizes content; the UI does not treat membership as an access grant.
+
+## Load and present the stream
+
+The surface loads Collection metadata and Article pages independently, but combines their states for presentation. It maps canonical Article query items into the shared Article Stream, including publication, timestamp, preview, cover, and selected-row state. Pagination stays with the Article-query module, while the surface owns loading, retry, empty, and load-more presentation.
+
+Selecting a row asks the workspace to open that exact Article ID from the User Library pane. Workspace state then owns the selected-row projection and the Article pane. See the [User Library surface](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/reader-library/ReaderLibrarySurface.tsx) and its [workspace adapter](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/app/workspace/surfaces/ReaderLibraryWorkspaceAdapter.tsx).
+
+## Collection actions
+
+The Collection picker supports selecting, creating, renaming, and deleting user Collections. Inputs use the shared Collection-name contract before mutation. Successful changes invalidate the user-scoped Collection list; creating a Collection selects it, and deleting the currently selected Collection returns the pane to `library`.
+
+Authentication and private query identity remain part of the [Devour state boundary](/developer/devour/state). The [User Library API adapter](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/reader-library/readerLibraryApi.ts) validates Collection responses at the browser boundary.

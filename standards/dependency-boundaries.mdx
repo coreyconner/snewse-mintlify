@@ -1,0 +1,59 @@
+---
+title: "Dependency boundaries"
+description: "Required public operation seams, query direction, composition ownership, and import boundaries in Core."
+---
+
+## Public behavior
+
+Product owners expose cross-owner business behavior as exact named files under
+`<owner>/operations/`. Another product owner imports only the operation it calls,
+never the target owner's persistence, HTTP, internal files, or owner-wide facade.
+
+A named operation implements the use case directly. Pass-through wrappers,
+`module.ts`, `service.ts`, `capabilities.ts`, dependency bags, and local barrels
+are excluded from this structure. Re-export aliases and callback frameworks
+cannot justify retaining two layers without distinct responsibilities.
+
+Named operations may be concrete database-backed reads or commands under the
+[persistence standard](/standards/persistence). Separate adapters are justified
+by substantive policy or coordination, not directory symmetry.
+
+## Queries and infrastructure
+
+Named cross-owner reads live under `queries/<result-kind>/`. Their focused
+persistence is read-only and belongs only to that query. Product owners do not
+import query coordinators, and query persistence must not become a repository.
+
+Infrastructure does not import product owners or queries. Product code may use
+narrow infrastructure mechanisms, but infrastructure does not own product behavior.
+
+## Composition roots
+
+Application composition constructs shared infrastructure once and injects
+focused functions. It may import owner HTTP or worker assembly and concrete
+adapters. Dependencies are supplied directly, without a dependency container,
+service locator, or in-process HTTP loopback.
+
+Workers and CLI programs call named operations. They do not import the HTTP
+application to obtain dependencies. The [Core architecture guide](/developer/core/overview)
+shows how the current processes are composed.
+
+## Import forms
+
+| Boundary | Required form |
+| --- | --- |
+| Same owner | Relative imports with NodeNext `.js` specifiers |
+| Approved cross-owner application seam | Native `package.json#imports` |
+| Cross-package public API | Workspace package import |
+| Physical schema outside the schema directory | Central schema entry point |
+
+Database schema leaves may import sibling schema leaves. General folder-level
+`index.ts` barrels are outside the permitted import structure.
+
+## Enforcement
+
+Dependency Cruiser is the executable boundary check. A grandfathered violation
+is debt, not permission for a new dependency or baseline entry. The current
+[Core configuration](https://github.com/coreyconner/snewse/blob/master/apps/core/dependency-cruiser.config.mjs)
+is the enforcement reference; approval follows the
+[exception process](/standards/exceptions).

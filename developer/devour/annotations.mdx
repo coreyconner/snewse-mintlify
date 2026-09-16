@@ -1,0 +1,24 @@
+---
+title: "Annotation interactions"
+description: "How Devour captures selections, projects highlights, manages drafts and mutations, and coordinates the Annotations pane."
+---
+
+Devour composes private annotations onto a ready Article without making the Article module own annotation records. The Article provides neutral selection, projection, reveal, and focus capabilities. The annotations module owns private queries, drafts, display adaptation, colors, mutations, and the Annotations pane. Core owns lifecycle and anchor guarantees; see [Annotations and Tags](/developer/core/annotations) and [annotation anchors](/developer/core/annotation-anchors).
+
+## From selection to pending highlight
+
+The Article captures a stabilized native text selection and converts it into canonical Unit and Graf coordinates. Selection across unsupported boundaries is rejected by the Article selection guard. A valid selection opens the color toolbar near the selection without opening the Annotations pane.
+
+Choosing a color creates a local pending projection immediately. Pending presentation is an overlay backed by draft state; it is not a fabricated saved response. After the create mutation succeeds, the user-scoped query cache becomes the saved-record owner and the pending projection is reconciled with the returned annotation.
+
+## Saved projections and the pane
+
+Saved highlights are adapted into Article anchor runs. Activating a highlight reveals its annotation card. On a wide layout the context pane can open without taking Article focus. Where the context pane replaces the Article, the adapter dismisses Article-anchored controls and explicitly focuses the revealed card. Closing the pane requests focus back to its source Article pane.
+
+The pane descriptor carries the Article ID, route locator, and source Article pane ID. The [workspace adapter](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/app/workspace/surfaces/ReaderAnnotationsWorkspaceAdapter.tsx) resolves the live Article capability by pane ID and reports the surface unavailable when that relationship no longer matches.
+
+## Draft and mutation ownership
+
+Unsaved note drafts live in memory and are scoped to the authenticated user. A draft can be active or parked, inline or in the context pane, dirty or clean, and can record a version conflict. Changing identity clears drafts before exposing the next user's state; dirty drafts also register a browser unload warning. Saved annotation data remains in TanStack Query and is synchronously removed for a departed identity.
+
+Mutations lock an annotation while create, patch, delete, or restore work is pending or being checked. Optimistic cache changes retain rollback information, then invalidate or reconcile the owning user-and-Article query after the server response. The exact [annotation draft state](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/reader-annotations/readerAnnotationDrafts.tsx) and the broader [annotations module](https://github.com/coreyconner/snewse/tree/master/apps/devour/src/modules/reader-annotations) show the split between local drafts and saved-query coordination.

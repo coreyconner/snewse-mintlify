@@ -1,0 +1,79 @@
+---
+title: "Observability"
+description: "How browser telemetry, Core instrumentation, worker diagnostics, and Grafana relate in SNEWSE."
+---
+
+SNEWSE's operational observability connects browser behavior with server and
+worker diagnostics. The [observability standard](/standards/observability)
+owns the tool choices and telemetry boundary. This guide explains the current
+integration; it does not define requirements for a separate AI evaluation system.
+
+## Tools and responsibilities
+
+| Tool | Responsibility in SNEWSE | Implementation owner |
+| --- | --- | --- |
+| Grafana | Explore diagnostic signals and dashboards | Observability infrastructure |
+| Faro React and web tracing | Collect Devour browser signals and trace browser requests | Devour browser observability |
+| OpenTelemetry SDK and exporters | Instrument Core and worker work and export operational signals | Core observability infrastructure |
+| OpenTelemetry Collector | Receive and route the local stack's OTLP signals | Local infrastructure configuration |
+| Tempo and Prometheus | Store local traces and metrics respectively | Local infrastructure configuration |
+
+Grafana is the investigation interface; it does not replace the libraries that
+instrument applications. The [local stack](/operate/observability) runs Grafana,
+the Collector, Tempo, and Prometheus. That stack does not supply a Faro collector
+or a log backend.
+
+## Devour browser telemetry
+
+Devour uses `@grafana/faro-react` and `@grafana/faro-web-tracing`. Initialization
+is browser-only and requires the configured Faro collector URL. It installs
+web, React, and request-tracing instrumentation, disables automatic console
+capture and geolocation tracking, and uses nonpersistent Faro sessions.
+
+The application records route identity through Faro's page and view APIs.
+Request instrumentation restricts trace-header propagation to its trusted Core
+URL pattern. React error boundaries report failures through the Faro integration
+when browser observability is configured.
+
+Before transport, Devour sanitizes recognized URL fields. It removes query
+strings and fragments, collapses Media paths, and reduces external URLs to their
+origin. This transformation is specific to recognized URL fields; it is not a
+general content-redaction guarantee for every arbitrary payload.
+
+The [browser observability implementation](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/lib/browserObservability.ts)
+owns initialization, propagation, and sanitization. The
+[root integration](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/routes/__root.tsx)
+owns the root error boundary, and
+[Vite configuration](https://github.com/coreyconner/snewse/blob/master/apps/devour/vite.config.ts)
+supplies the collector setting to the browser build.
+
+## Core and worker signals
+
+Core initializes OpenTelemetry at process startup. HTTP diagnostics use request
+and trace identifiers; background ingestion uses its persisted run identity,
+worker identity, attempt, and stage. A submission and later worker execution
+can therefore be investigated together without treating the worker as a child
+HTTP call.
+
+Use [Core telemetry](/developer/core/telemetry) for runtime lifecycle, correlation,
+dependency instrumentation, and failure isolation. Use
+[ingestion diagnosis](/operate/core/ingestion-diagnosis) for the operational
+sequence from a receipt to an accepted run outcome.
+
+## Choose the signal for the question
+
+| Question | Useful signal |
+| --- | --- |
+| Is a class of requests getting slower or failing more often? | Metrics with bounded route and outcome dimensions |
+| Which stage explains one slow or failed execution? | A trace with meaningful operation and dependency spans |
+| What lifecycle transition did a worker attempt observe? | A sanitized structured event, correlated with persisted run state |
+| What product action occurred? | Product analytics under its own event contract |
+
+Record identifiers are useful for locating one execution in logs or traces.
+Using them as metric dimensions would create a distinct series for each record.
+Likewise, a span is useful when its timing or outcome helps locate a problem;
+one span per render, record, or stream chunk usually obscures that explanation.
+
+An AI provider call can have timing, usage, and outcome diagnostics without
+exporting its prompt or response. Reproducing model output or building evaluation
+datasets is a different task from diagnosing the operational telemetry system.

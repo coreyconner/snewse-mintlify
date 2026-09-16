@@ -1,0 +1,124 @@
+---
+title: "Exception records"
+description: "The active Unit cast exception and closed historical runtime-validation exceptions."
+---
+
+These records preserve maintainer decisions and their exact scope. The
+[exception process](/standards/exceptions) governs new requests and broader scope.
+Changing a record is not itself approval.
+
+| Record | Current applicability | Original approval |
+| --- | --- | --- |
+| [Unit similarity half-vector cast](#unit-similarity-half-vector-cast) | Active; implementation location updated after refactoring | Corey Conner, August 20, 2026; issue #395 |
+| [Legacy JSON transport handoff](#legacy-json-transport-handoff) | Closed; exceptional handoff removed | Corey Conner, September 2, 2026; issue #438 |
+| [Legacy JSONB relocation](#legacy-jsonb-relocation) | Closed; transitional payload obligations resolved | Corey Conner, September 2, 2026; issue #438 |
+
+## Unit similarity half-vector cast
+
+**Status:** Active under the original narrow approval.
+
+**Standard:** [Handwritten runtime SQL](/standards/persistence#handwritten-runtime-sql).
+
+**Approved by:** Corey Conner on August 20, 2026, under
+[issue #395](https://github.com/coreyconner/snewse/issues/395).
+
+**Current owner and operation:** Unit query ranking, `relatedUnitDistance` in
+[`queries/units/rankings/related.ts`](https://github.com/coreyconner/snewse/blob/master/apps/core/src/queries/units/rankings/related.ts).
+
+The permitted fragment is the local parameterized cast of the Unit embedding to
+`halfvec(3072)`, used with Drizzle's cosine-distance expression. The original
+record named `rankSimilarUnits` in the former Unit persistence module. The
+[query-owner change](https://github.com/coreyconner/snewse/commit/157d8629534d01dbaee23723039ec08f142d5185)
+moved the equivalent fragment to its current owner. This location correction
+does not expand the approval.
+
+### Need and alternatives
+
+The cast lets the existing `vector(3072)` value match the half-vector HNSW index
+expression. The approval records that Drizzle ORM v1 RC4 supplies a half-vector
+column builder and accepts SQL expressions in `cosineDistance`, but lacks the
+typed expression-cast API needed for this fragment. The checked repository still
+pins that ORM version.
+
+Querying the vector without the cast does not match the indexed expression.
+Changing the stored column or index is a separate storage and performance
+decision, not a typed replacement for this cast.
+
+### Scope and removal
+
+This exception does not authorize driver calls, other Unit queries, other vector
+operations, schema or index DDL, reusable raw-query interfaces, or untyped results.
+
+The exception ends when the pinned stack can express the equivalent cast through a typed
+API, or an approved storage/index redesign replaces it. Focused PostgreSQL
+verification must establish equivalent behavior, and both the runtime fragment
+and its exact policy-baseline entry must be removed.
+
+The current [Unit query integration coverage](https://github.com/coreyconner/snewse/blob/master/apps/core/src/queries/units/__tests__/query-units.integration.test.ts)
+checks related ordering against a PostgreSQL half-vector reference. The presence
+of a test or baseline is implementation evidence, not a separate approval.
+
+## Legacy JSON transport handoff
+
+**Status:** Closed; no current permission to return unvalidated product JSON
+from infrastructure.
+
+**Original approval:** Corey Conner on September 2, 2026, under
+[issue #438](https://github.com/coreyconner/snewse/issues/438), against the
+[runtime-validation standard](/standards/runtime-validation).
+
+The temporary approval allowed the existing `readJsonBody` helper to return
+parsed JSON as `unknown` to existing adjacent route owners that immediately
+validated it. It also allowed retrieval of a body already validated by Hono
+without another generic schema. It did not permit new callers, unchecked field
+access, unknown-typed dictionaries, broad lint overrides, or other infrastructure
+`unknown` returns.
+
+The [closeout change](https://github.com/coreyconner/snewse/commit/474d0abb6521ab178be4233c7457aa60a908c35f)
+removed that handoff. Current
+[bounded-body transport](https://github.com/coreyconner/snewse/blob/master/apps/core/src/infrastructure/http/api-request-body.ts)
+returns text, and the
+[Analytics route owner](https://github.com/coreyconner/snewse/blob/master/apps/core/src/analytics/http/create-analytics-routes.ts)
+decodes and validates its request with the complete owned schema.
+
+The historical alternatives explain the original narrow allowance: a generic
+JSON check was not product validation, making infrastructure own product schemas
+would put ownership in the wrong place, and rewriting every caller exceeded the
+then-approved relocation. Those constraints do not create a reusable exception.
+
+## Legacy JSONB relocation
+
+**Status:** Closed; no current permission to treat static JSONB annotations as
+runtime validation or to retain the former unchecked payload boundaries.
+
+**Original approval:** Corey Conner on September 2, 2026, under
+[issue #438](https://github.com/coreyconner/snewse/issues/438), against the
+[runtime-validation standard](/standards/runtime-validation).
+
+The temporary approval covered mechanical relocation of exact existing fields
+while their product owners were being refactored. It did not cover new fields,
+payload shapes, write paths, unchecked access, or broad lint overrides. Its
+removal condition was owner validation or removal of every listed boundary
+before the refactor closeout.
+
+| Former boundary | Current disposition |
+| --- | --- |
+| Article layout | Validated by the Article composition and anchor-projection owners. |
+| Article semantic failure | Former field removed. |
+| Stored ingestion Manifest | Validated with the stored-provenance schema when captured data enters worker processing. |
+| Legacy Wayfinder output | Former schema and runtime removed. |
+| Media, Variant, and Attachment metadata dictionaries | Replaced with typed relational columns. |
+| Ingestion-run stage state and failure | Strict owner schemas validate persisted claims and writes. |
+| Artifact payload | Replacement model accepts an explicitly validated opaque JSON contract. |
+| Artifact generation metadata | Former field removed. |
+
+The current owners are represented by
+[Article persistence](https://github.com/coreyconner/snewse/tree/master/apps/core/src/articles/persistence),
+[captured provenance parsing](https://github.com/coreyconner/snewse/blob/master/apps/core/src/ingestion/worker/parse-captured-article.ts),
+[Media schema](https://github.com/coreyconner/snewse/blob/master/apps/core/src/infrastructure/postgres/schema/media.ts),
+[run lifecycle](https://github.com/coreyconner/snewse/tree/master/apps/core/src/ingestion/worker),
+and the [Artifact contract](https://github.com/coreyconner/snewse/blob/master/packages/contracts/src/artifact.ts).
+
+These historical ingress checks do not establish a rule to revalidate trusted
+internal values at every layer. The current
+[runtime-validation standard](/standards/runtime-validation) owns that distinction.

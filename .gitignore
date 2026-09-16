@@ -1,0 +1,7 @@
+# Local research, migration ledger, and preview output stay in this workspace.
+.agents/project/
+to-mintlify/
+
+# Local Mintlify build and dependency artifacts.
+node_modules/
+.mintlify/

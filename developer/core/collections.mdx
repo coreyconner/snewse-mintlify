@@ -1,0 +1,58 @@
+---
+title: "Collections"
+description: "How private Collections organize accessible Articles without becoming a second access model."
+---
+
+A Collection is a private, named organization of Articles for one authenticated user. Collection membership records where an Article is organized. [User Access](/developer/core/user-access) remains the authority for whether the user can access that Article.
+
+<Note>
+  Placing an Article in a Collection never creates access. Removing it or deleting the Collection never revokes access or changes canonical Article content.
+</Note>
+
+## Private ownership
+
+Every Collection operation derives the owner from the authenticated identity. List, rename, delete, placement, and removal are scoped to that user. An unknown Collection and a Collection owned by another user both produce the same private not-found result.
+
+Collection lists have a deterministic order: creation time first, then Collection ID. Names are unique per user according to PostgreSQL `lower(name)`. This produces three useful behaviors:
+
+- another user can use the same name;
+- an exact current-name rename is unchanged; and
+- a casing-only rename is allowed when it does not collide with another Collection.
+
+## Lifecycle operations
+
+Core supports listing, creating, renaming, and deleting Collections, plus placing and removing Article membership. Create and rename reject a same-user name collision. The current [Collection contracts](https://github.com/coreyconner/snewse/blob/master/packages/contracts/src/collections.ts) define the exact request and response shapes. The [Collection routes](https://github.com/coreyconner/snewse/blob/master/apps/core/src/collections/http/create-collection-routes.ts) define the HTTP methods, paths, authentication, cache behavior, and status mapping.
+
+## Placement sequence
+
+Placing an Article composes the Collection and User Access owners in a fixed order.
+
+<Steps>
+  <Step title="Check Article access">
+    Collections asks User Access whether the authenticated user has the exact Article grant. An inaccessible or unknown Article produces a private not-found outcome.
+  </Step>
+  <Step title="Resolve an owned Collection">
+    The operation finds the requested Collection under the same user. Intake may instead supply a create-if-missing name, which reuses an existing case-insensitive match or creates the Collection inside the placement transaction.
+  </Step>
+  <Step title="Insert membership">
+    Core inserts the user, Collection, and Article relationship. Repeating the same placement succeeds without adding a duplicate or changing the Article grant.
+  </Step>
+</Steps>
+
+The database relationship ties membership to both the owned Collection and the user's Article access row. This prevents a membership from naming another user's Collection or an Article the user cannot access.
+
+Removal has a narrower precondition. It verifies the owned Collection, then deletes the matching membership if present. The Article does not need to be currently resolvable for an idempotent removal. Deleting a Collection cascades through its memberships while leaving Article grants and canonical content intact.
+
+The current operations are in [`apps/core/src/collections/operations`](https://github.com/coreyconner/snewse/tree/master/apps/core/src/collections/operations), with ownership constraints in [`schema/collections.ts`](https://github.com/coreyconner/snewse/blob/master/apps/core/src/infrastructure/postgres/schema/collections.ts).
+
+## Collection membership filters accessible Articles
+
+Collection contents are requested through the Article query's Collection filter rather than a separate nested list. The Article query still begins with the user's accessible Article set. Collection membership adds another condition inside that set; it cannot add an inaccessible Article. The current filter is implemented in [`filters/collections.ts`](https://github.com/coreyconner/snewse/blob/master/apps/core/src/queries/articles/filters/collections.ts).
+
+## Placement during intake
+
+Manifest intake may carry a request-level Collection intent. After capture and Article acquisition succeed, intake calls the same placement operation described above. The intent can name an existing Collection ID or request create-if-missing by name.
+
+The current [`submit-manifest-bundle` operation](https://github.com/coreyconner/snewse/blob/master/apps/core/src/ingestion/operations/submit-manifest-bundle.ts) shows that composition and its commit order.
+
+For the surrounding owner composition, see the [Core architecture](/developer/core/overview). For the canonical resource being organized, see [Articles](/developer/core/articles).

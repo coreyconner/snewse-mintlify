@@ -1,0 +1,33 @@
+---
+title: "Bundle construction"
+description: "How the Web Clipper creates Article XML, resolves Media, and packages submissions and review ZIPs."
+---
+
+After review, the Clipper creates one validated ingestion Manifest and its referenced Article XML. It can resolve available image bytes for either multipart submission or a downloaded inspection ZIP.
+
+## Build the content pair
+
+The [bundle builder](https://github.com/coreyconner/snewse/blob/master/apps/web-clipper/src/lib/ingestionBundle.ts) converts reviewed content into Article XML, connects XML figure references to Manifest Media IDs, records capture provenance and warnings, and validates the Manifest with `@snewse/contracts`.
+
+The Manifest and XML have different jobs. The Manifest carries source identity, metadata, provenance, Media descriptions, and warnings. Article XML carries the ordered body. [Manifest bundles](/developer/manifest/bundles) owns the shared format meaning, and [Article XML](/developer/manifest/article-xml) owns the body format.
+
+## Resolve Media without losing the capture
+
+Media begins as an external URL. The [Media resolver](https://github.com/coreyconner/snewse/blob/master/apps/web-clipper/src/lib/media.ts) fetches images one at a time. A successful fetch changes the source to a bundle-relative file and retains its bytes. A failed or blocked fetch leaves the external URL in place and appends a warning; it does not fail the whole export.
+
+Caption and credit matching is best effort. It uses Defuddle-exposed schema data and URL matching, so a publisher's unusual metadata can leave fields absent even when the image itself is captured.
+
+## Multipart and ZIP outputs
+
+| Output | Contents | Purpose |
+| --- | --- | --- |
+| Multipart request | validated payload, `articleXml`, and mapped Media file parts | Durable submission to Core |
+| Downloaded ZIP | `manifest.json`, `article.xml`, and fetched files below `media/` | Local inspection of captured content |
+
+The [ZIP builder](https://github.com/coreyconner/snewse/blob/master/apps/web-clipper/src/lib/downloadBundle.ts) preserves bundle-relative paths. Collection selection stays outside the ZIP because it is authenticated request intent, not captured source content.
+
+<Warning>
+  A ZIP download is an inspection artifact. The current Core intake path accepts the multipart request built by the Clipper; downloading a ZIP does not submit it.
+</Warning>
+
+Warnings are part of the review surface. Inspect them to distinguish missing source metadata from Media that stayed external.

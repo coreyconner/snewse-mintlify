@@ -1,0 +1,91 @@
+---
+title: "Capture and submission"
+description: "Understand manifest intake, immutable capture identity, media preparation, transaction boundaries, and submission receipts."
+---
+
+Capture accepts an authenticated manifest bundle and establishes the durable source record that later semantic work must follow. It validates the envelope and Article XML together, resolves bundled files, preserves source provenance, and decides whether the submission is new, changed, or unchanged.
+
+The [manifest bundle](/developer/manifest/bundles) and [Article XML](/developer/manifest/article-xml) guides own the format and field meanings. This page explains what Core does after those formats reach the ingestion boundary.
+
+## Submission boundary
+
+The HTTP route accepts a verified user session or a scoped API key, enforces a bounded multipart request, and passes a validated bundle to the submission operation. Validation checks relationships as well as individual values: each bundled file reference must resolve uniquely, and each Media reference in Article XML must exist in the manifest. The request does not call semantic providers; a new or changed capture queues that work for the separate worker.
+
+Core parses Article XML into canonical source text before it chooses a capture. Submitted Graf and Media identifiers are provenance keys. Core maps them to newly allocated canonical identifiers when it creates a capture, and the worker later reloads through those stored mappings.
+
+See the [multipart parser](https://github.com/coreyconner/snewse/blob/master/apps/core/src/ingestion/http/multipart.ts), [HTTP route](https://github.com/coreyconner/snewse/blob/master/apps/core/src/ingestion/http/routes.ts), and [capture-manifest validation](https://github.com/coreyconner/snewse/blob/master/apps/core/src/ingestion/capture/manifest.ts) for exact limits and validation errors.
+
+## Capture identity
+
+For one `articleKey`, Core compares the newest stored capture with the submitted canonical plain text. An exact text and hash match is `unchanged` and reuses that Article ID. Otherwise Core creates a new immutable Article capture and queues a semantic run. Metadata changes alone do not create a new capture.
+
+Concurrent equivalent submissions converge inside a serializable transaction. Core rechecks identity after media preparation, so only the winning transaction keeps its capture and bundled objects. The [Articles guide](/developer/core/articles) owns the resulting capture identity and version semantics; the [capture transaction](https://github.com/coreyconner/snewse/blob/master/apps/core/src/ingestion/capture/capture.ts) is the authority for the exact comparison and ordering.
+
+<Tabs sync={false}>
+  <Tab title="New">
+    No capture exists for the source key. Core allocates a new Article and queued run, preserves the submitted source record, and returns the new Article ID.
+  </Tab>
+  <Tab title="Changed">
+    The newest capture has different canonical text. Core creates another immutable capture and leaves every earlier capture intact.
+  </Tab>
+  <Tab title="Unchanged">
+    The canonical text matches exactly. The initial fast path reuses the existing Article before bundled-object preparation, and Core can still acquire it for a different user or complete Collection placement. A concurrent capture can win after this request prepared objects; the losing request then resolves as unchanged and cleans up only its unused uploads.
+  </Tab>
+</Tabs>
+
+## Media preparation and source preservation
+
+External Media remains a source URL with its submitted metadata. Bundled Media is uploaded under a canonical Media ID before the capture transaction can reference it. An initially unchanged submission returns before object-storage preparation. When a concurrent request creates the equivalent capture after preparation begins, the loser discards only its own unused uploads. Capture preserves submitted audio or video Media, but ingestion does not generate an Article audio version.
+
+Current captures preserve the original XML, normalized manifest, canonical plain text and hash, ordered captured bylines, and the submitted-to-canonical Graf and Media mappings. This immutable evidence lets the worker reconstruct exactly the captured source even after the current manifest schema evolves. Historical records may use older stored shapes, but new submissions must satisfy the current manifest contract.
+
+The [media preparation code](https://github.com/coreyconner/snewse/blob/master/apps/core/src/ingestion/capture/media.ts) defines object ownership and cleanup, while [captured-Article parsing](https://github.com/coreyconner/snewse/blob/master/apps/core/src/ingestion/worker/parse-captured-article.ts) defines current and historical reload behavior.
+
+## Commit sequence
+
+<Steps>
+  <Step title="Commit the canonical capture">
+    Core commits the immutable Article, captured source facts, canonical Grafs and Media associations, provenance mappings, and queued run together. A new or changed capture has one queued run before this transaction commits.
+  </Step>
+  <Step title="Acquire the Article for the user">
+    A separate transaction creates or reuses the user's direct Article grant and derives access to captured Media. This transaction is idempotent. [User Access](/developer/core/user-access) defines grant ownership and propagation.
+  </Step>
+  <Step title="Apply optional Collection intent">
+    When the bundle requests placement, Core checks the user's Article access, resolves a user-owned Collection, and inserts membership in another idempotent transaction. [Collections](/developer/core/collections) owns those rules.
+  </Step>
+  <Step title="Return the receipt">
+    The receipt identifies the Article, reports `new`, `changed`, or `unchanged`, describes the acquisition result, and includes the intake-facing Article status and paired run when one exists. A successful response implies that any requested Collection placement also committed; placement has no separate receipt field.
+  </Step>
+</Steps>
+
+The separate commits are deliberate failure boundaries. Collection placement cannot roll back capture or user acquisition. A valid retry can reuse both and finish the missing placement. Likewise, a worker failure cannot erase the captured source.
+
+## Receipts and readiness
+
+The route returns `202` for a new or changed capture and `200` for an unchanged capture. Either response can describe an Article that is still processing. The receipt projects a processing Article with a queued run as `captured`; otherwise it retains the Article's processing, ready, or failed status. An unchanged resolution does not queue another run and reports the existing paired run when one is present.
+
+Treat the receipt as confirmation of the submission operation's committed outcomes. For the public shape of processing, failed, and ready Article composition, see [Articles](/developer/core/articles). For the exact receipt fields, use the [ingestion contract](https://github.com/coreyconner/snewse/blob/master/packages/contracts/src/ingestionManifest.ts).
+
+## Failure and cleanup boundaries
+
+| Failure point | Durable state | Retry consequence |
+| --- | --- | --- |
+| Validation or media preparation before capture | No new canonical capture | Correct the bundle or external dependency and submit again |
+| Known capture rollback after bundled uploads | No new capture; Core attempts to delete only the objects prepared by that attempt | A retry starts from intake |
+| Lost capture commit acknowledgement | Commit outcome is uncertain; Core retains uploaded objects and logs their canonical IDs | Reconcile before deleting; a blind cleanup could remove committed content |
+| User acquisition | The capture and queued run remain | Retrying acquisition is idempotent |
+| Collection placement | The capture and user grant remain | A valid retry completes placement without recreating them |
+
+Cleanup failures can leave unreferenced objects. Core logs their canonical IDs for reconciliation rather than allowing cleanup to change the capture result. The [submission operation](https://github.com/coreyconner/snewse/blob/master/apps/core/src/ingestion/operations/submit-manifest-bundle.ts) contains the definitive ordering and uncertain-commit handling.
+
+<Columns cols={3}>
+  <Card title="Ingestion lifecycle" icon="route" href="/developer/core/ingestion/overview">
+    Place capture in the complete request and publication flow.
+  </Card>
+  <Card title="Worker execution" icon="rotate" href="/developer/core/ingestion/worker">
+    Follow the queued run after capture commits.
+  </Card>
+  <Card title="Semantic publication" icon="sparkles" href="/developer/core/ingestion/semantics">
+    See what the worker derives and publishes.
+  </Card>
+</Columns>

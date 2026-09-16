@@ -1,0 +1,27 @@
+---
+title: "Unit Details and related content"
+description: "How Devour presents an independent Unit, its Topics, and related Unit or Article results."
+---
+
+An Article renders Units as part of its composition, while Unit Details presents one Unit as an independent context surface. Core owns canonical Unit identity, Graf ordering, and retrieval semantics; see [Units and Grafs](/developer/core/units) and [Unit queries](/developer/core/unit-queries).
+
+## Unit Details
+
+The surface loads one exact Unit ID and distinguishes loading, failure, unavailable, and successful results. A successful result renders canonical Grafs in order and preserves their text with whitespace. The originating Article headline is an action that opens that exact Article ID through workspace navigation.
+
+Unit Topics are adapted to the public Topics block. Selecting one opens a Topic context successor, and the shared Article Topic filters control which chips are visible. The Unit module owns the content; the [workspace adapter](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/app/workspace/surfaces/UnitDetailsWorkspaceAdapter.tsx) owns closing the pane and translating navigation requests.
+
+## Related content module
+
+The related-content module supplies two distinct presentations:
+
+- **Related Units** appear within Unit Details. Each result includes the matched Unit's canonical text and minimal originating Article context. Selecting a result opens the originating Article by exact ID.
+- **Related Articles** occupy their own context surface opened from an Article. Results use the shared Article Stream and replace the current Article target when selected.
+
+Related Unit results paginate through the module's query state and keep their selection local to the current result set. Loading, retry, empty, and load-more states are explicit. See [`RelatedUnitsSurface`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/related-content/RelatedUnitsSurface.tsx) and [`RelatedArticleList`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/related-content/RelatedArticleList.tsx).
+
+<Note>
+  Minimal Article context on a related Unit result does not establish Article access. Opening the Article still passes through the normal exact-ID query and private unavailable behavior.
+</Note>
+
+Current workspace navigation opens the Article but does not carry a matched-Unit target into it. That limit is visible at the related-content selection boundary and should not be inferred as passage navigation.

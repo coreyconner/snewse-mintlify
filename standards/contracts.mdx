@@ -1,0 +1,41 @@
+---
+title: "Public contracts"
+description: "Intentional wire schemas, shared contract ownership, and compatibility across application boundaries."
+---
+
+## Wire ownership
+
+Public request and response schemas are intentional wire contracts. They are
+not automatic exports of database tables. Shared wire schemas live in
+`@snewse/contracts`, which owns cross-package route contracts.
+
+The owning operation maps database projections to the narrow public contract.
+Public fields reflect intentional wire requirements; derivability from Drizzle
+alone does not justify exposing internal IDs, ownership fields, defaults, or timestamps.
+
+Core does not define UI or view-model types. Devour owns transformations from
+wire contracts to presentation models. The [package guide](/developer/packages#contracts)
+explains exports and consumers; [runtime validation](/standards/runtime-validation)
+defines when untrusted values are checked.
+
+## Compatibility
+
+The Contracts package follows the workspace version while the repository is
+private. Public DTO changes still need to preserve client compatibility:
+
+| Change | Compatibility requirement |
+| --- | --- |
+| Add a field | Compatible when optional, nullable where older clients already tolerate `null`, or added to response objects clients parse by name. |
+| Remove or rename a field | A breaking change; removal follows deprecation. |
+| Change meaning or accepted input | Changes to meaning, tighter request validation, enum values, response wrappers, or content-score semantics are breaking changes. |
+
+Deprecated response fields remain optional where possible. The owning contract
+or route reference documents replacements, and API and client tests cover the
+migration window.
+
+## Implemented API surface
+
+The catalog and OpenAPI inventory contain implemented routes only.
+The [generated API reference](/developer/core/http#generated-api-reference)
+exposes the implemented route surface. A proposed schema or frontend caller
+does not establish that an endpoint exists.

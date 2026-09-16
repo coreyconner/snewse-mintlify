@@ -1,0 +1,39 @@
+---
+title: "Observability"
+description: "The telemetry tools SNEWSE uses and the boundary of the operational observability system."
+---
+
+## Technology choices
+
+| Area | Standard tool and use |
+| --- | --- |
+| Operational dashboards and investigation | Grafana is the observability interface. |
+| Frontend telemetry | Grafana Faro provides browser telemetry; Devour integrates its React and web-tracing packages. |
+| Core and worker instrumentation | OpenTelemetry APIs, OTLP export, and W3C trace context provide instrumentation. Observability infrastructure owns exporter and SDK setup. |
+
+The [observability guide](/developer/observability) explains how these pieces fit
+together. [Core telemetry](/developer/core/telemetry) owns server and worker
+instrumentation details, and [local observability](/operate/observability) owns
+stack commands and configuration.
+
+## Telemetry boundary
+
+The Grafana/Faro/OpenTelemetry system is for operational diagnosis. Product
+analytics has [its own intake and contract](/developer/core/analytics). Prompts,
+captured content, generated outputs, credentials, and raw provider payloads do
+not belong in operational telemetry.
+
+Telemetry export is best effort. A telemetry failure must not change a product
+result or block normal request, worker, or browser execution.
+
+## Scope of AI-related telemetry
+
+AI calls can contribute diagnostic facts such as operation, provider, model,
+duration, usage, and outcome. This is instrumentation of an execution, not a
+store of its input and output.
+
+<Note>
+  This page governs the operational telemetry system. It does not set capture,
+  retention, access, approval, or evaluation rules for a separate AI evaluation
+  or evidence system. Those systems need their own requirements.
+</Note>
