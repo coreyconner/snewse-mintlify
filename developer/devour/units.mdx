@@ -9,7 +9,7 @@ An Article renders Units as part of its composition, while Unit Details presents
 
 The surface loads one exact Unit ID and distinguishes loading, failure, unavailable, and successful results. A successful result renders canonical Grafs in order and preserves their text with whitespace. The originating Article headline is an action that opens that exact Article ID through workspace navigation.
 
-Unit Topics are adapted to the public Topics block. Selecting one opens a Topic context successor, and the shared Article Topic filters control which chips are visible. The Unit module owns the content; the [workspace adapter](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/app/workspace/surfaces/UnitDetailsWorkspaceAdapter.tsx) owns closing the pane and translating navigation requests.
+Unit Topics are adapted to the public Topics block. Selecting one opens a Topic context successor. The Article Topic filters that control which chips are visible are scoped to that Unit Details instance and are independent of any Article surface's filters. The Unit module owns the content; the [workspace adapter](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/app/workspace/surfaces/UnitDetailsWorkspaceAdapter.tsx) owns closing the pane and translating navigation requests.
 
 ## Related content module
 

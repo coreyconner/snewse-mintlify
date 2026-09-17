@@ -19,6 +19,6 @@ The fixed surface uses fallback label data only for presentation while metadata 
 
 ## Embedded Topic controls
 
-The embedded Topics block receives already loaded Topic references from its host. It filters visible chips by the shared Article Topic categories and emits a typed Topic selection; it does not fetch or navigate by itself. Article and Unit adapters translate the selection into workspace context navigation.
+The embedded Topics block receives already loaded Topic references from its host. Each host owns its own Article Topic filter state via [`useArticleTopicFilters`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/topics/useArticleTopicFilters.ts) exported from the Topics module, so an Article surface and a Unit Details pane each hold independent filter selections. The block filters visible chips by the host's current filter state and emits a typed Topic selection; it does not fetch or navigate by itself. Article and Unit adapters translate the selection into workspace context navigation.
 
 This split lets [`TopicsBlock`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/topics/blocks/TopicsBlock.tsx) render in both the Article footer and Unit Details without learning either pane's geometry. Topics presentation remains owner-local and uses the same neutral surface family in Explore and fixed Topic panes.
