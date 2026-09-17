@@ -23,8 +23,8 @@ flowchart TD
 | Must survive reload, copying, and browser history | TanStack Router and the workspace URL | Pane descriptors, order, focus, Article ID, selected Collection, selected Topic |
 | Comes from or is written to Core | TanStack Query plus a module API owner | Article detail, Article lists, Topics, Collections, Units, saved annotations |
 | Describes the current authenticated browser user | Better Auth through `authClient.useSession()` | Admission, query enablement, and the user ID in private cache keys |
-| Shared presentation state that does not belong in the URL | A narrow TanStack Store owner | Navigation rail expansion, Article-card layout, Article Topic filters |
-| Belongs to an active interaction or mounted instance | Component state or a focused provider | Sign-in fields, unsaved annotation drafts, mounted Article capabilities |
+| Shared presentation state that does not belong in the URL | A narrow TanStack Store owner | Navigation rail expansion, Article-card layout |
+| Belongs to an active interaction or mounted instance | Component state or a focused provider | Sign-in fields, unsaved annotation drafts, mounted Article capabilities, per-surface Article Topic filters |
 
 The decision is based on authority and lifetime rather than which framework is convenient. [Workspace navigation](/developer/devour/workspace-navigation) describes the durable URL value. The [app store](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/app/state/appStore.ts) contains no pane state or selected product resource.
 
@@ -111,7 +111,7 @@ State stays local when it only coordinates the mounted interaction:
 
 - TanStack Form owns sign-in values, validation metadata, and the awaited submission lifecycle.
 - The annotation draft provider owns active and parked unsaved drafts in memory and warns before unloading dirty work.
-- The Article module's presentation store owns active Topic filters.
+- The Topics module's [`useArticleTopicFilters`](https://github.com/coreyconner/snewse/blob/master/apps/devour/src/modules/topics/useArticleTopicFilters.ts) hook owns Article Topic filter state per mounted surface, so each Article and Unit Details instance keeps an independent selection.
 - The Article capability provider owns callable capabilities for mounted Article panes.
 
 None of these values is serialized into the workspace URL or written to the server merely because multiple components use it. Persisted annotations move through their mutation and query owners; durable pane selections move through workspace navigation.
